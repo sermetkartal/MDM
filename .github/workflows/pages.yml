@@ -1,8 +1,8 @@
-name: Deploy Documentation to GitHub Pages
+name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
@@ -11,262 +11,28 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
-  cancel-in-progress: true
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build documentation site
-        run: |
-          mkdir -p _site
-
-          cat > _site/index.html << 'HTMLEOF'
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>MDM Platform - Enterprise Mobile Device Management</title>
-            <style>
-              * { margin: 0; padding: 0; box-sizing: border-box; }
-              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a0a; color: #e5e5e5; }
-              .hero { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); padding: 80px 20px; text-align: center; }
-              .hero h1 { font-size: 3rem; font-weight: 800; background: linear-gradient(to right, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 16px; }
-              .hero p { font-size: 1.25rem; color: #94a3b8; max-width: 700px; margin: 0 auto 32px; }
-              .badges { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 32px; }
-              .badge { background: #1e293b; border: 1px solid #334155; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; color: #94a3b8; }
-              .cta { display: inline-flex; align-items: center; gap: 8px; background: #3b82f6; color: white; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; transition: background 0.2s; }
-              .cta:hover { background: #2563eb; }
-              .cta-outline { background: transparent; border: 1px solid #475569; color: #e2e8f0; }
-              .cta-outline:hover { background: #1e293b; }
-              .cta-group { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
-              .container { max-width: 1200px; margin: 0 auto; padding: 60px 20px; }
-              .section-title { font-size: 2rem; font-weight: 700; margin-bottom: 40px; text-align: center; }
-              .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
-              .feature { background: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 28px; transition: border-color 0.2s; }
-              .feature:hover { border-color: #3b82f6; }
-              .feature-icon { font-size: 1.5rem; margin-bottom: 12px; }
-              .feature h3 { font-size: 1.1rem; margin-bottom: 8px; color: #f1f5f9; }
-              .feature p { font-size: 0.9rem; color: #94a3b8; line-height: 1.6; }
-              .arch { background: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 32px; overflow-x: auto; margin: 40px 0; }
-              .arch pre { color: #60a5fa; font-size: 0.85rem; line-height: 1.5; }
-              .tech-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
-              .tech { background: #111827; border: 1px solid #1f2937; border-radius: 8px; padding: 16px; text-align: center; }
-              .tech strong { color: #f1f5f9; display: block; margin-bottom: 4px; }
-              .tech span { color: #94a3b8; font-size: 0.85rem; }
-              .docs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
-              .doc-card { background: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 24px; text-decoration: none; color: inherit; transition: border-color 0.2s; display: block; }
-              .doc-card:hover { border-color: #3b82f6; }
-              .doc-card h3 { color: #60a5fa; margin-bottom: 8px; }
-              .doc-card p { color: #94a3b8; font-size: 0.9rem; }
-              .stats { display: flex; gap: 40px; justify-content: center; flex-wrap: wrap; margin: 40px 0; }
-              .stat { text-align: center; }
-              .stat-number { font-size: 2.5rem; font-weight: 800; background: linear-gradient(to right, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-              .stat-label { color: #94a3b8; font-size: 0.9rem; margin-top: 4px; }
-              footer { text-align: center; padding: 40px 20px; border-top: 1px solid #1f2937; color: #64748b; font-size: 0.85rem; }
-              footer a { color: #60a5fa; text-decoration: none; }
-              @media (max-width: 640px) { .hero h1 { font-size: 2rem; } .stats { gap: 20px; } .stat-number { font-size: 1.8rem; } }
-            </style>
-          </head>
-          <body>
-            <div class="hero">
-              <h1>MDM Platform</h1>
-              <p>Enterprise-grade Mobile Device Management for Android &amp; iOS. Full remote control, kiosk mode, policy engine, compliance, and more.</p>
-              <div class="badges">
-                <span class="badge">15 Microservices</span>
-                <span class="badge">Android + iOS</span>
-                <span class="badge">WebRTC Remote Control</span>
-                <span class="badge">5 Kiosk Modes</span>
-                <span class="badge">SAML/OIDC SSO</span>
-                <span class="badge">Multi-Tenant</span>
-              </div>
-              <div class="cta-group">
-                <a href="https://github.com/sermetkartal/MDM" class="cta">View on GitHub</a>
-                <a href="#docs" class="cta cta-outline">Documentation</a>
-              </div>
-            </div>
-
-            <div class="container">
-              <div class="stats">
-                <div class="stat"><div class="stat-number">570+</div><div class="stat-label">Source Files</div></div>
-                <div class="stat"><div class="stat-number">60K+</div><div class="stat-label">Lines of Code</div></div>
-                <div class="stat"><div class="stat-number">15</div><div class="stat-label">Microservices</div></div>
-                <div class="stat"><div class="stat-number">20</div><div class="stat-label">DB Migrations</div></div>
-              </div>
-            </div>
-
-            <div class="container">
-              <h2 class="section-title">Features</h2>
-              <div class="features">
-                <div class="feature">
-                  <div class="feature-icon">📱</div>
-                  <h3>Device Management</h3>
-                  <p>Enrollment via QR, NFC, Zero-Touch, Knox, and DEP. Full device inventory with hardware info, app tracking, and real-time status.</p>
-                </div>
-                <div class="feature">
-                  <div class="feature-icon">🔒</div>
-                  <h3>Kiosk Mode</h3>
-                  <p>5 modes: Single-app, multi-app, digital signage, web kiosk, and assessment. Watchdog recovery, admin escape hatch, peripheral control.</p>
-                </div>
-                <div class="feature">
-                  <div class="feature-icon">📋</div>
-                  <h3>Policy Engine</h3>
-                  <p>Multi-level conflict resolution (org → group → device). Restriction, passcode, WiFi, VPN, and kiosk policies with versioning.</p>
-                </div>
-                <div class="feature">
-                  <div class="feature-icon">✅</div>
-                  <h3>Compliance Engine</h3>
-                  <p>Rule-based evaluation with compound conditions. Automated remediation (lock, wipe, restrict). Grace periods and severity scoring.</p>
-                </div>
-                <div class="feature">
-                  <div class="feature-icon">🖥️</div>
-                  <h3>Remote Control</h3>
-                  <p>WebRTC real-time screen sharing with 3 quality presets. Touch input forwarding. Session management with audit logging.</p>
-                </div>
-                <div class="feature">
-                  <div class="feature-icon">📍</div>
-                  <h3>Geofencing</h3>
-                  <p>Circle and polygon geofences with map editor. Enter/exit/dwell triggers with configurable actions. Real-time location tracking.</p>
-                </div>
-                <div class="feature">
-                  <div class="feature-icon">📦</div>
-                  <h3>App Management</h3>
-                  <p>Enterprise app store. Silent install/uninstall in Device Owner mode. Version management, drift detection, managed configurations.</p>
-                </div>
-                <div class="feature">
-                  <div class="feature-icon">⚡</div>
-                  <h3>Command Pipeline</h3>
-                  <p>Reliable delivery via FCM push + gRPC streaming. NATS JetStream queue, exponential backoff retry, bulk dispatch, expiry sweeper.</p>
-                </div>
-                <div class="feature">
-                  <div class="feature-icon">🔐</div>
-                  <h3>Enterprise Auth</h3>
-                  <p>RBAC with 7 built-in roles and custom permissions. SAML 2.0, OIDC SSO, SCIM 2.0 provisioning, LDAP/AD directory sync.</p>
-                </div>
-                <div class="feature">
-                  <div class="feature-icon">🍎</div>
-                  <h3>iOS Support</h3>
-                  <p>Apple MDM protocol with DEP, APNs push, configuration profiles. Single App Mode, Guided Access. WiFi, VPN, restriction profiles.</p>
-                </div>
-                <div class="feature">
-                  <div class="feature-icon">📊</div>
-                  <h3>Reports &amp; Analytics</h3>
-                  <p>5 report templates with PDF, CSV, Excel export. Scheduled reports with email delivery. Real-time telemetry dashboards.</p>
-                </div>
-                <div class="feature">
-                  <div class="feature-icon">🛡️</div>
-                  <h3>Security</h3>
-                  <p>Row-level security, mTLS device auth, X.509 CA with SCEP, rate limiting, CSP headers, API key management, audit logging.</p>
-                </div>
-              </div>
-            </div>
-
-            <div class="container">
-              <h2 class="section-title">Architecture</h2>
-              <div class="arch">
-                <pre>
-                                +-----------------+
-                                |  Admin Console  |
-                                |   (Next.js)     |
-                                +--------+--------+
-                                         |
-                                    REST / WebSocket
-                                         |
-  +--------------+           +-----------+-----------+
-  | Android/iOS  |-- gRPC -->|      API Gateway      |
-  |    Agent     |           +-----------+-----------+
-  +--------------+                       |
-                     +-------------------+-------------------+
-                     |         |         |         |         |
-                +----+---+ +--+----+ +--+----+ +--+----+ +--+--------+
-                |Device  | |Command| |Policy | |  App  | |Compliance |
-                |Service | |Service| |Service| |Service| | Service   |
-                +--------+ +-------+ +-------+ +-------+ +-----------+
-                +----+---+ +--+----+ +--+----+ +--+----+ +--+--------+
-                |Kiosk   | |Geofnc| | Cert  | |Report | |  Audit    |
-                |Service | |Service| |Service| |Service| | Service   |
-                +--------+ +-------+ +-------+ +-------+ +-----------+
-                +----+---+ +--+----+ +--+--------+
-                |  iOS   | |Remote | |Notification|
-                |  MDM   | |Control| |  Service   |
-                +--------+ +-------+ +------------+
-                     |         |         |         |
-                +----+---+ +--+----+ +--+----+ +--+----+
-                |Postgres| | Redis | | NATS  | | MinIO |
-                +--------+ +-------+ +-------+ +-------+
-                </pre>
-              </div>
-            </div>
-
-            <div class="container">
-              <h2 class="section-title">Tech Stack</h2>
-              <div class="tech-grid">
-                <div class="tech"><strong>Frontend</strong><span>Next.js 14, TailwindCSS, shadcn/ui</span></div>
-                <div class="tech"><strong>Backend</strong><span>Go 1.22+, Node.js 20, TypeScript</span></div>
-                <div class="tech"><strong>Database</strong><span>PostgreSQL 16, TimescaleDB</span></div>
-                <div class="tech"><strong>Cache</strong><span>Redis 7 Cluster</span></div>
-                <div class="tech"><strong>Messaging</strong><span>NATS JetStream</span></div>
-                <div class="tech"><strong>Storage</strong><span>S3 / MinIO</span></div>
-                <div class="tech"><strong>Protocols</strong><span>gRPC, REST, WebSocket, WebRTC</span></div>
-                <div class="tech"><strong>Android</strong><span>Kotlin, Hilt, Room, gRPC</span></div>
-                <div class="tech"><strong>Infrastructure</strong><span>Kubernetes, Helm, Terraform</span></div>
-                <div class="tech"><strong>Monitoring</strong><span>Prometheus, Grafana, Jaeger</span></div>
-                <div class="tech"><strong>CI/CD</strong><span>GitHub Actions, ArgoCD</span></div>
-                <div class="tech"><strong>Security</strong><span>Vault, mTLS, SCEP, RLS</span></div>
-              </div>
-            </div>
-
-            <div class="container" id="docs">
-              <h2 class="section-title">Documentation</h2>
-              <div class="docs-grid">
-                <a href="https://github.com/sermetkartal/MDM/blob/main/docs/architecture.md" class="doc-card">
-                  <h3>Architecture</h3>
-                  <p>System overview, service map, communication patterns, data flow diagrams, and database schema.</p>
-                </a>
-                <a href="https://github.com/sermetkartal/MDM/blob/main/docs/api-guide.md" class="doc-card">
-                  <h3>API Guide</h3>
-                  <p>Authentication, endpoints, pagination, error handling, rate limiting, and quick start examples.</p>
-                </a>
-                <a href="https://github.com/sermetkartal/MDM/blob/main/docs/deployment-guide.md" class="doc-card">
-                  <h3>Deployment Guide</h3>
-                  <p>Docker Compose local dev, Kubernetes production, Terraform infrastructure, and monitoring setup.</p>
-                </a>
-                <a href="https://github.com/sermetkartal/MDM/blob/main/docs/android-agent-guide.md" class="doc-card">
-                  <h3>Android Agent</h3>
-                  <p>Enrollment methods, Device Owner setup, kiosk configuration, and troubleshooting guide.</p>
-                </a>
-                <a href="https://github.com/sermetkartal/MDM/blob/main/docs/admin-guide.md" class="doc-card">
-                  <h3>Admin Guide</h3>
-                  <p>Console usage, device management, policy creation, compliance rules, SSO, and LDAP setup.</p>
-                </a>
-                <a href="https://github.com/sermetkartal/MDM/blob/main/docs/openapi.yaml" class="doc-card">
-                  <h3>OpenAPI Spec</h3>
-                  <p>Complete API specification (OpenAPI 3.1) with all endpoints, schemas, and examples.</p>
-                </a>
-              </div>
-            </div>
-
-            <footer>
-              <p>MDM Platform &mdash; Built with Go, TypeScript, Kotlin &mdash; <a href="https://github.com/sermetkartal/MDM">github.com/sermetkartal/MDM</a></p>
-            </footer>
-          </body>
-          </html>
-          HTMLEOF
-
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: _site
-
   deploy:
-    needs: build
-    runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
     steps:
-      - id: deploy
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Build site
+        run: |
+          mkdir _site
+          cp docs/site/index.html _site/index.html 2>/dev/null || echo "Using generated page"
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '_site'
+      - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4
