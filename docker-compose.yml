@@ -1,16 +1,15 @@
-version: "3.9"
-
 services:
   postgres:
     image: timescale/timescaledb:latest-pg16
+    container_name: mdm-postgres
     ports:
-      - "5432:5432"
+      - "5435:5432"
     environment:
       POSTGRES_DB: mdm
       POSTGRES_USER: mdm
       POSTGRES_PASSWORD: mdm_dev_password
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mdm_postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U mdm"]
       interval: 10s
@@ -19,11 +18,12 @@ services:
 
   redis:
     image: redis:7-alpine
+    container_name: mdm-redis
     ports:
-      - "6379:6379"
+      - "6381:6379"
     command: redis-server --appendonly yes
     volumes:
-      - redis_data:/data
+      - mdm_redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -32,27 +32,29 @@ services:
 
   nats:
     image: nats:2-alpine
+    container_name: mdm-nats
     ports:
-      - "4222:4222"
-      - "8222:8222"
+      - "4223:4222"
+      - "8223:8222"
     command: "--js --sd /data --http_port 8222"
     volumes:
-      - nats_data:/data
+      - mdm_nats_data:/data
 
   minio:
     image: minio/minio:latest
+    container_name: mdm-minio
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "9010:9000"
+      - "9011:9001"
     environment:
       MINIO_ROOT_USER: mdm_minio
       MINIO_ROOT_PASSWORD: mdm_minio_password
     command: server /data --console-address ":9001"
     volumes:
-      - minio_data:/data
+      - mdm_minio_data:/data
 
 volumes:
-  postgres_data:
-  redis_data:
-  nats_data:
-  minio_data:
+  mdm_postgres_data:
+  mdm_redis_data:
+  mdm_nats_data:
+  mdm_minio_data:

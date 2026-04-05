@@ -55,12 +55,6 @@ ALTER TABLE geofences FORCE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation_geofences ON geofences
   USING (org_id = current_setting('app.current_org_id')::uuid);
 
--- geofence_events
-ALTER TABLE geofence_events ENABLE ROW LEVEL SECURITY;
-ALTER TABLE geofence_events FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation_geofence_events ON geofence_events
-  USING (org_id = current_setting('app.current_org_id')::uuid);
-
 -- audit_logs
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs FORCE ROW LEVEL SECURITY;
@@ -115,8 +109,4 @@ ALTER TABLE integrations FORCE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation_integrations ON integrations
   USING (org_id = current_setting('app.current_org_id')::uuid);
 
--- ldap_sync_history
-ALTER TABLE ldap_sync_history ENABLE ROW LEVEL SECURITY;
-ALTER TABLE ldap_sync_history FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation_ldap_sync_history ON ldap_sync_history
-  USING (org_id = current_setting('app.current_org_id')::uuid);
+-- Note: geofence_events and ldap_sync_history tables are managed at application level

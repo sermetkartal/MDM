@@ -24,8 +24,6 @@ ALTER TABLE compliance_violations DISABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation_geofences ON geofences;
 ALTER TABLE geofences DISABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS tenant_isolation_geofence_events ON geofence_events;
-ALTER TABLE geofence_events DISABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS tenant_isolation_audit_logs ON audit_logs;
 ALTER TABLE audit_logs DISABLE ROW LEVEL SECURITY;
@@ -54,5 +52,3 @@ ALTER TABLE enrollment_configs DISABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation_integrations ON integrations;
 ALTER TABLE integrations DISABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS tenant_isolation_ldap_sync_history ON ldap_sync_history;
-ALTER TABLE ldap_sync_history DISABLE ROW LEVEL SECURITY;
