@@ -13,6 +13,8 @@ export interface Notification {
   created_at: string;
 }
 
+const MAX_NOTIFICATIONS = 100;
+
 interface NotificationState {
   unreadCount: number;
   notifications: Notification[];
@@ -29,14 +31,19 @@ export const useNotificationStore = create<NotificationState>((set) => ({
   setUnreadCount: (count) => set({ unreadCount: count }),
   setNotifications: (notifications) => set({ notifications }),
   appendNotifications: (newNotifications) =>
-    set((state) => ({
-      notifications: [
+    set((state) => {
+      const merged = [
         ...state.notifications,
         ...newNotifications.filter(
           (n) => !state.notifications.some((existing) => existing.id === n.id)
         ),
-      ],
-    })),
+      ];
+      // Keep only the most recent notifications to limit memory usage
+      const trimmed = merged.length > MAX_NOTIFICATIONS
+        ? merged.slice(merged.length - MAX_NOTIFICATIONS)
+        : merged;
+      return { notifications: trimmed };
+    }),
   markAsRead: (id) =>
     set((state) => ({
       notifications: state.notifications.map((n) =>

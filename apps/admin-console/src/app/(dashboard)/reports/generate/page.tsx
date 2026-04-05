@@ -30,11 +30,7 @@ export default function GenerateReportPage() {
 
   const { data: currentJob } = useReportJob(activeJobId ?? "", {
     enabled: !!activeJobId,
-    refetchInterval: (query) => {
-      const status = query.state.data?.status;
-      if (status === "completed" || status === "failed") return false;
-      return 1000;
-    },
+    refetchInterval: activeJobId ? 1000 : false,
   });
 
   const handleGenerate = () => {

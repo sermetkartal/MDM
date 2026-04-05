@@ -10,7 +10,14 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { api } from "@/lib/api-client";
-import type { AppleSettings } from "@shared-types";
+interface AppleSettings {
+  apns_cert_uploaded: boolean;
+  apns_cert_expiry: string | null;
+  apns_topic: string | null;
+  dep_token_configured: boolean;
+  dep_server_name: string | null;
+  mdm_signing_cert_uploaded: boolean;
+}
 
 export default function AppleSettingsPage() {
   const queryClient = useQueryClient();
@@ -22,19 +29,19 @@ export default function AppleSettingsPage() {
 
   const uploadAPNsCert = useMutation({
     mutationFn: (formData: FormData) =>
-      api.postForm("/v1/settings/apple/apns-cert", formData),
+      api.post("/v1/settings/apple/apns-cert", formData),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["settings", "apple"] }),
   });
 
   const uploadDEPToken = useMutation({
     mutationFn: (formData: FormData) =>
-      api.postForm("/v1/settings/apple/dep-token", formData),
+      api.post("/v1/settings/apple/dep-token", formData),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["settings", "apple"] }),
   });
 
   const uploadSigningCert = useMutation({
     mutationFn: (formData: FormData) =>
-      api.postForm("/v1/settings/apple/signing-cert", formData),
+      api.post("/v1/settings/apple/signing-cert", formData),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["settings", "apple"] }),
   });
 

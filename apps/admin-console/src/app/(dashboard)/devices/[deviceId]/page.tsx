@@ -37,8 +37,10 @@ import { formatDate, formatRelativeTime } from "@/lib/utils";
 
 function CircularProgress({ value, label, color }: { value: number; label: string; color: string }) {
   const radius = 36;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (value / 100) * circumference;
+  const { circumference, offset } = React.useMemo(() => {
+    const circ = 2 * Math.PI * radius;
+    return { circumference: circ, offset: circ - (value / 100) * circ };
+  }, [value]);
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -74,10 +76,12 @@ export default function DeviceDetailPage() {
   const params = useParams();
   const deviceId = params.deviceId as string;
 
+  const [activeTab, setActiveTab] = React.useState("overview");
+
   const { data: device, isLoading } = useDevice(deviceId);
-  const { data: policiesData } = useDevicePolicies(deviceId);
-  const { data: appsData } = useDeviceApps(deviceId);
-  const { data: complianceData } = useDeviceCompliance(deviceId);
+  const { data: policiesData } = useDevicePolicies(deviceId, { enabled: activeTab === "policies" });
+  const { data: appsData } = useDeviceApps(deviceId, { enabled: activeTab === "apps" });
+  const { data: complianceData } = useDeviceCompliance(deviceId, { enabled: activeTab === "overview" });
 
   const policies = policiesData?.data ?? [];
   const apps = appsData?.data ?? [];
@@ -198,12 +202,12 @@ export default function DeviceDetailPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="overview">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="apps">Apps</TabsTrigger>
           <TabsTrigger value="policies">Policies</TabsTrigger>
-          <TabsTrigger value="telemetry" asChild>
+          <TabsTrigger value="telemetry">
             <Link href={`/devices/${deviceId}/telemetry`}>Telemetry</Link>
           </TabsTrigger>
           <TabsTrigger value="location">Location</TabsTrigger>
@@ -276,7 +280,7 @@ export default function DeviceDetailPage() {
             </Card>
 
             {/* iOS-specific info */}
-            {(device.platform === "ios" || device.platform === "ipados") && (
+            {((device.platform as string) === "ios" || (device.platform as string) === "ipados") && (
               <Card className="md:col-span-2">
                 <CardHeader>
                   <CardTitle className="text-base">iOS Device Details</CardTitle>

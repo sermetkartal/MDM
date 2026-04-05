@@ -31,7 +31,34 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   const wsRef = React.useRef<WebSocket | null>(null);
   const reconnectAttemptRef = React.useRef(0);
   const reconnectTimeoutRef = React.useRef<ReturnType<typeof setTimeout>>();
+  const invalidationTimerRef = React.useRef<ReturnType<typeof setTimeout>>();
+  const pendingInvalidationsRef = React.useRef<Set<string>>(new Set());
   const [isConnected, setIsConnected] = React.useState(false);
+
+  const flushInvalidations = React.useCallback(() => {
+    const pending = pendingInvalidationsRef.current;
+    if (pending.size === 0) return;
+
+    if (pending.has("devices:status")) {
+      queryClient.invalidateQueries({ queryKey: deviceKeys.lists() });
+    }
+    if (pending.has("commands:updates")) {
+      queryClient.invalidateQueries({ queryKey: ["commands"] });
+    }
+    if (pending.has("compliance:alerts")) {
+      queryClient.invalidateQueries({ queryKey: ["compliance"] });
+    }
+
+    pending.clear();
+  }, [queryClient]);
+
+  const scheduleInvalidation = React.useCallback((channel: string) => {
+    pendingInvalidationsRef.current.add(channel);
+    if (invalidationTimerRef.current) {
+      clearTimeout(invalidationTimerRef.current);
+    }
+    invalidationTimerRef.current = setTimeout(flushInvalidations, 500);
+  }, [flushInvalidations]);
 
   const connect = React.useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
@@ -55,18 +82,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
           const msg = JSON.parse(event.data) as WebSocketMessage;
           onMessage?.(msg);
 
-          // Handle built-in channel events
-          switch (msg.channel) {
-            case "devices:status":
-              queryClient.invalidateQueries({ queryKey: deviceKeys.all });
-              break;
-            case "commands:updates":
-              // Invalidate device queries when commands update
-              queryClient.invalidateQueries({ queryKey: deviceKeys.all });
-              break;
-            case "compliance:alerts":
-              queryClient.invalidateQueries({ queryKey: deviceKeys.all });
-              break;
+          // Schedule debounced granular invalidation per channel
+          if (msg.channel) {
+            scheduleInvalidation(msg.channel);
           }
         } catch {
           // Ignore non-JSON messages
@@ -85,7 +103,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     } catch {
       scheduleReconnect();
     }
-  }, [url, channels, onMessage, queryClient]);
+  }, [url, channels, onMessage, scheduleInvalidation]);
 
   const scheduleReconnect = React.useCallback(() => {
     const attempt = reconnectAttemptRef.current;
@@ -98,6 +116,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   }, [connect]);
 
   const disconnect = React.useCallback(() => {
+    if (invalidationTimerRef.current) {
+      clearTimeout(invalidationTimerRef.current);
+    }
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
     }

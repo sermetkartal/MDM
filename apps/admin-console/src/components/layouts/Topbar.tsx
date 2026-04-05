@@ -19,7 +19,7 @@ import { useNotificationStore } from "@/stores/notification.store";
 import { useUnreadCount } from "@/hooks/queries/use-notifications";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 
-export function Topbar() {
+export const Topbar = React.memo(function Topbar() {
   const { theme, setTheme } = useTheme();
   const user = useAuthStore((s) => s.user);
   const currentOrg = useAuthStore((s) => s.currentOrg);
@@ -129,4 +129,4 @@ export function Topbar() {
       />
     </>
   );
-}
+});

@@ -79,7 +79,7 @@ export function useDeviceTelemetry(deviceId: string, range: string = "24h") {
         `/v1/devices/${deviceId}/telemetry?from=${from}&to=${to}&interval=${interval}`
       ),
     enabled: !!deviceId,
-    refetchInterval: range === "24h" ? 60_000 : undefined,
+    refetchInterval: range === "24h" ? 300_000 : undefined,
   });
 }
 

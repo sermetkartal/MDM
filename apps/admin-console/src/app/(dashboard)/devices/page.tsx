@@ -31,37 +31,39 @@ import type { Device, ListDevicesParams } from "@/lib/types";
 
 export default function DevicesPage() {
   const router = useRouter();
-  const [search, setSearch] = React.useState("");
-  const [debouncedSearch, setDebouncedSearch] = React.useState("");
-  const [page, setPage] = React.useState(1);
-  const [pageSize, setPageSize] = React.useState(20);
-  const [statusFilter, setStatusFilter] = React.useState("");
-  const [complianceFilter, setComplianceFilter] = React.useState("");
-  const [sortBy, setSortBy] = React.useState<string | undefined>();
-  const [sortOrder, setSortOrder] = React.useState<"asc" | "desc">("asc");
+  const [filters, setFilters] = React.useState({
+    search: "",
+    debouncedSearch: "",
+    page: 1,
+    pageSize: 20,
+    statusFilter: "",
+    complianceFilter: "",
+    sortBy: undefined as string | undefined,
+    sortOrder: "asc" as "asc" | "desc",
+  });
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
 
   const bulkAction = useBulkAction();
 
   // Debounce search
   React.useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    const timer = setTimeout(() => setFilters(prev => ({ ...prev, debouncedSearch: prev.search })), 300);
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [filters.search]);
 
   // Reset page on filter change
   React.useEffect(() => {
-    setPage(1);
-  }, [debouncedSearch, statusFilter, complianceFilter]);
+    setFilters(prev => ({ ...prev, page: 1 }));
+  }, [filters.debouncedSearch, filters.statusFilter, filters.complianceFilter]);
 
   const params: ListDevicesParams = {
-    page,
-    limit: pageSize,
-    search: debouncedSearch || undefined,
-    status: (statusFilter as ListDevicesParams["status"]) || undefined,
-    complianceStatus: (complianceFilter as ListDevicesParams["complianceStatus"]) || undefined,
-    sortBy,
-    sortOrder,
+    page: filters.page,
+    limit: filters.pageSize,
+    search: filters.debouncedSearch || undefined,
+    status: (filters.statusFilter as ListDevicesParams["status"]) || undefined,
+    complianceStatus: (filters.complianceFilter as ListDevicesParams["complianceStatus"]) || undefined,
+    sortBy: filters.sortBy,
+    sortOrder: filters.sortOrder,
   };
 
   const { data, isLoading, isError } = useDevices(params);
@@ -86,12 +88,12 @@ export default function DevicesPage() {
   };
 
   const handleSort = (key: string) => {
-    if (sortBy === key) {
-      setSortOrder((o) => (o === "asc" ? "desc" : "asc"));
-    } else {
-      setSortBy(key);
-      setSortOrder("asc");
-    }
+    setFilters(prev => {
+      if (prev.sortBy === key) {
+        return { ...prev, sortOrder: prev.sortOrder === "asc" ? "desc" as const : "asc" as const };
+      }
+      return { ...prev, sortBy: key, sortOrder: "asc" as const };
+    });
   };
 
   const handleBulkAction = (type: string) => {
@@ -105,8 +107,8 @@ export default function DevicesPage() {
   const SortHeader = ({ colKey, children }: { colKey: string; children: React.ReactNode }) => (
     <button className="flex items-center gap-1 hover:text-foreground" onClick={() => handleSort(colKey)}>
       {children}
-      {sortBy === colKey ? (
-        sortOrder === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+      {filters.sortBy === colKey ? (
+        filters.sortOrder === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
       ) : (
         <ChevronsUpDown className="h-4 w-4 opacity-50" />
       )}
@@ -132,15 +134,15 @@ export default function DevicesPage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search devices..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={filters.search}
+            onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
             className="pl-9"
           />
         </div>
         <select
           className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+          value={filters.statusFilter}
+          onChange={(e) => setFilters(prev => ({ ...prev, statusFilter: e.target.value }))}
         >
           <option value="">All Status</option>
           <option value="enrolled">Enrolled</option>
@@ -151,8 +153,8 @@ export default function DevicesPage() {
         </select>
         <select
           className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-          value={complianceFilter}
-          onChange={(e) => setComplianceFilter(e.target.value)}
+          value={filters.complianceFilter}
+          onChange={(e) => setFilters(prev => ({ ...prev, complianceFilter: e.target.value }))}
         >
           <option value="">All Compliance</option>
           <option value="compliant">Compliant</option>
@@ -161,8 +163,8 @@ export default function DevicesPage() {
         </select>
         <select
           className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-          value={pageSize}
-          onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+          value={filters.pageSize}
+          onChange={(e) => setFilters(prev => ({ ...prev, pageSize: Number(e.target.value), page: 1 }))}
         >
           <option value={10}>10 per page</option>
           <option value={20}>20 per page</option>
@@ -292,8 +294,8 @@ export default function DevicesPage() {
             <Button
               variant="outline"
               size="sm"
-              disabled={page <= 1}
-              onClick={() => setPage(page - 1)}
+              disabled={filters.page <= 1}
+              onClick={() => setFilters(prev => ({ ...prev, page: prev.page - 1 }))}
             >
               <ChevronLeft className="h-4 w-4" />
               Previous
@@ -301,8 +303,8 @@ export default function DevicesPage() {
             <Button
               variant="outline"
               size="sm"
-              disabled={page >= pagination.totalPages}
-              onClick={() => setPage(page + 1)}
+              disabled={filters.page >= pagination.totalPages}
+              onClick={() => setFilters(prev => ({ ...prev, page: prev.page + 1 }))}
             >
               Next
               <ChevronRight className="h-4 w-4" />

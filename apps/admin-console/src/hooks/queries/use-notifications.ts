@@ -41,7 +41,8 @@ export function useNotifications(params: { offset?: number; limit?: number; unre
       return api.get<NotificationsResponse>(`/v1/notifications?${searchParams.toString()}`);
     },
     enabled: !!orgId,
-    refetchInterval: 30_000,
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
   });
 
   useEffect(() => {
@@ -70,7 +71,8 @@ export function useUnreadCount() {
       return api.get<UnreadCountResponse>(`/v1/notifications/unread-count?${searchParams.toString()}`);
     },
     enabled: !!orgId,
-    refetchInterval: 30_000,
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
   });
 
   useEffect(() => {

@@ -37,27 +37,27 @@ export function useDevice(deviceId: string) {
   });
 }
 
-export function useDevicePolicies(deviceId: string) {
+export function useDevicePolicies(deviceId: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: deviceKeys.policies(deviceId),
     queryFn: () => api.get<DataResponse<DevicePolicy>>(`/v1/devices/${deviceId}/policies`),
-    enabled: !!deviceId,
+    enabled: !!deviceId && (options?.enabled ?? true),
   });
 }
 
-export function useDeviceApps(deviceId: string) {
+export function useDeviceApps(deviceId: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: deviceKeys.apps(deviceId),
     queryFn: () => api.get<DataResponse<DeviceApp>>(`/v1/devices/${deviceId}/apps`),
-    enabled: !!deviceId,
+    enabled: !!deviceId && (options?.enabled ?? true),
   });
 }
 
-export function useDeviceCompliance(deviceId: string) {
+export function useDeviceCompliance(deviceId: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: deviceKeys.compliance(deviceId),
     queryFn: () => api.get<DataResponse<DeviceViolation>>(`/v1/devices/${deviceId}/compliance`),
-    enabled: !!deviceId,
+    enabled: !!deviceId && (options?.enabled ?? true),
   });
 }
 

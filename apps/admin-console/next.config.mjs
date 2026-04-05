@@ -8,7 +8,7 @@ const securityHeaders = [
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: "standalone",
+  output: process.env.NODE_ENV === "production" ? "standalone" : undefined,
   reactStrictMode: true,
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];
