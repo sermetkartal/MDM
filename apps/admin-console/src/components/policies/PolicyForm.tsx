@@ -4,7 +4,6 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import type { Platform } from "@/lib/types";
 
 type PolicyType = "restriction" | "wifi" | "vpn" | "passcode" | "kiosk";
@@ -25,10 +24,49 @@ interface PolicyFormProps {
   submitLabel?: string;
 }
 
-const defaultRestrictions = {
-  camera: true, screenshot: true, usb: true, bluetooth: true,
-  wifiConfig: true, factoryReset: true, appInstall: true,
-  developerOptions: false, safeMode: true, clipboard: true, volume: true,
+const defaultAndroidRestrictions: Record<string, boolean> = {
+  // Hardware & Peripherals
+  cameraDisabled: false, screenCaptureDisabled: false, usbFileTransferDisabled: false,
+  usbDataSignalingDisabled: false, bluetoothDisabled: false, bluetoothSharingDisabled: false,
+  nfcDisabled: false, outgoingBeamDisabled: false, mountPhysicalMediaDisabled: false,
+  printingDisabled: false, ambientDisplayDisabled: false, microphoneToggleDisabled: false,
+  // Network & Connectivity
+  wifiConfigDisabled: false, wifiDirectDisabled: false, wifiTetheringDisabled: false,
+  configVpnDisabled: false, configMobileNetworksDisabled: false, configPrivateDnsDisabled: false,
+  configTetheringDisabled: false, dataRoamingDisabled: false,
+  // Apps & Data
+  installAppsDisabled: false, uninstallAppsDisabled: false, installUnknownSourcesDisabled: false,
+  installUnknownSourcesGloballyDisabled: false, appsControlDisabled: false, autofillDisabled: false,
+  crossProfileCopyPasteDisabled: false, shareIntoManagedProfileDisabled: false, createWindowsDisabled: false,
+  // Security & Protection
+  factoryResetDisabled: false, safeBootDisabled: false, debuggingDisabled: false,
+  networkResetDisabled: false, locationSharingDisabled: false, contentCaptureDisabled: false,
+  contentSuggestionsDisabled: false, statusBarDisabled: false, keyguardDisabled: false, autoTimeRequired: false,
+  // User & Account
+  outgoingCallsDisabled: false, smsDisabled: false, addUserDisabled: false, removeUserDisabled: false,
+  userSwitchDisabled: false, modifyAccountsDisabled: false, addManagedProfileDisabled: false,
+  removeManagedProfileDisabled: false, grantAdminDisabled: false,
+  // Configuration & Settings
+  adjustVolumeDisabled: false, configBrightnessDisabled: false, configDateTimeDisabled: false,
+  configLocaleDisabled: false, configScreenTimeoutDisabled: false, configDefaultAppsDisabled: false,
+  configCredentialsDisabled: false, configLocationDisabled: false, configCellBroadcastsDisabled: false,
+};
+
+const defaultiOSRestrictions: Record<string, boolean> = {
+  // Media & Content
+  allowInAppPurchases: true, allowExplicitContent: true, allowBookstore: true,
+  allowBookstoreErotica: true, allowMultiplayerGaming: true, allowAddingGameCenterFriends: true,
+  allowSiriWhileLocked: true, allowVoiceDialing: true,
+  // Cloud & Sync
+  forceEncryptedBackup: false, allowCloudDocumentSync: true, allowCloudKeychainSync: true,
+  allowManagedAppsCloudSync: true,
+  // Connectivity
+  allowBluetoothModification: true, allowNFC: true, allowPersonalHotspot: true,
+  allowUSBRestrictedMode: true, allowVPNCreation: true,
+  // Device Control
+  allowPasscodeModification: true, allowFingerprintModification: true, allowAutoUnlock: true,
+  allowEraseContentAndSettings: true, forceAirPlayPairingPassword: false,
+  allowNotificationsModification: true, allowDiagnosticSubmission: true,
 };
 
 const defaultPasscode = {
@@ -61,6 +99,168 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
   );
 }
 
+function RestrictionToggle({ label, field, value, onChange }: { label: string; field: string; value: boolean; onChange: (field: string, value: boolean) => void }) {
+  return (
+    <label className="flex items-center justify-between py-1">
+      <span className="text-sm">{label}</span>
+      <input type="checkbox" checked={value} onChange={(e) => onChange(field, e.target.checked)} className="h-4 w-4 rounded border-gray-300" />
+    </label>
+  );
+}
+
+interface RestrictionCategory {
+  key: string;
+  title: string;
+  items: { label: string; field: string }[];
+}
+
+const androidCategories: RestrictionCategory[] = [
+  {
+    key: "hardware",
+    title: "Hardware & Peripherals",
+    items: [
+      { label: "Camera", field: "cameraDisabled" },
+      { label: "Screenshot", field: "screenCaptureDisabled" },
+      { label: "USB File Transfer", field: "usbFileTransferDisabled" },
+      { label: "USB Data Signaling", field: "usbDataSignalingDisabled" },
+      { label: "Bluetooth", field: "bluetoothDisabled" },
+      { label: "Bluetooth Sharing", field: "bluetoothSharingDisabled" },
+      { label: "NFC/Beam", field: "nfcDisabled" },
+      { label: "NFC Outgoing Beam", field: "outgoingBeamDisabled" },
+      { label: "Mount Physical Media", field: "mountPhysicalMediaDisabled" },
+      { label: "Printing", field: "printingDisabled" },
+      { label: "Ambient Display", field: "ambientDisplayDisabled" },
+      { label: "Microphone Toggle", field: "microphoneToggleDisabled" },
+    ],
+  },
+  {
+    key: "network",
+    title: "Network & Connectivity",
+    items: [
+      { label: "WiFi Configuration", field: "wifiConfigDisabled" },
+      { label: "WiFi Direct", field: "wifiDirectDisabled" },
+      { label: "WiFi Tethering", field: "wifiTetheringDisabled" },
+      { label: "VPN Configuration", field: "configVpnDisabled" },
+      { label: "Mobile Networks Config", field: "configMobileNetworksDisabled" },
+      { label: "Private DNS Config", field: "configPrivateDnsDisabled" },
+      { label: "Tethering Config", field: "configTetheringDisabled" },
+      { label: "Data Roaming", field: "dataRoamingDisabled" },
+    ],
+  },
+  {
+    key: "apps",
+    title: "Apps & Data",
+    items: [
+      { label: "Install Apps", field: "installAppsDisabled" },
+      { label: "Uninstall Apps", field: "uninstallAppsDisabled" },
+      { label: "Install Unknown Sources", field: "installUnknownSourcesDisabled" },
+      { label: "Unknown Sources Globally", field: "installUnknownSourcesGloballyDisabled" },
+      { label: "Apps Control Panel", field: "appsControlDisabled" },
+      { label: "Autofill", field: "autofillDisabled" },
+      { label: "Clipboard/Cross-Profile Copy", field: "crossProfileCopyPasteDisabled" },
+      { label: "Share Into Managed Profile", field: "shareIntoManagedProfileDisabled" },
+      { label: "Create Windows/Overlays", field: "createWindowsDisabled" },
+    ],
+  },
+  {
+    key: "security",
+    title: "Security & Protection",
+    items: [
+      { label: "Factory Reset", field: "factoryResetDisabled" },
+      { label: "Safe Boot", field: "safeBootDisabled" },
+      { label: "Developer Options/Debugging", field: "debuggingDisabled" },
+      { label: "Network Reset", field: "networkResetDisabled" },
+      { label: "Location Sharing", field: "locationSharingDisabled" },
+      { label: "Content Capture", field: "contentCaptureDisabled" },
+      { label: "Content Suggestions", field: "contentSuggestionsDisabled" },
+      { label: "Status Bar", field: "statusBarDisabled" },
+      { label: "Keyguard/Lock Screen", field: "keyguardDisabled" },
+      { label: "Auto Time Required", field: "autoTimeRequired" },
+    ],
+  },
+  {
+    key: "user",
+    title: "User & Account",
+    items: [
+      { label: "Outgoing Calls", field: "outgoingCallsDisabled" },
+      { label: "SMS", field: "smsDisabled" },
+      { label: "Add User", field: "addUserDisabled" },
+      { label: "Remove User", field: "removeUserDisabled" },
+      { label: "User Switch", field: "userSwitchDisabled" },
+      { label: "Modify Accounts", field: "modifyAccountsDisabled" },
+      { label: "Add Managed Profile", field: "addManagedProfileDisabled" },
+      { label: "Remove Managed Profile", field: "removeManagedProfileDisabled" },
+      { label: "Grant Admin", field: "grantAdminDisabled" },
+    ],
+  },
+  {
+    key: "config",
+    title: "Configuration & Settings",
+    items: [
+      { label: "Volume Adjustment", field: "adjustVolumeDisabled" },
+      { label: "Brightness Config", field: "configBrightnessDisabled" },
+      { label: "Date/Time Config", field: "configDateTimeDisabled" },
+      { label: "Locale Config", field: "configLocaleDisabled" },
+      { label: "Screen Timeout Config", field: "configScreenTimeoutDisabled" },
+      { label: "Default Apps Config", field: "configDefaultAppsDisabled" },
+      { label: "Credentials Config", field: "configCredentialsDisabled" },
+      { label: "Location Config", field: "configLocationDisabled" },
+      { label: "Cell Broadcasts Config", field: "configCellBroadcastsDisabled" },
+    ],
+  },
+];
+
+const iosCategories: RestrictionCategory[] = [
+  {
+    key: "media",
+    title: "Media & Content",
+    items: [
+      { label: "In-App Purchases", field: "allowInAppPurchases" },
+      { label: "Explicit Content", field: "allowExplicitContent" },
+      { label: "Bookstore", field: "allowBookstore" },
+      { label: "Bookstore Erotica", field: "allowBookstoreErotica" },
+      { label: "Multiplayer Gaming", field: "allowMultiplayerGaming" },
+      { label: "Game Center Friends", field: "allowAddingGameCenterFriends" },
+      { label: "Siri While Locked", field: "allowSiriWhileLocked" },
+      { label: "Voice Dialing", field: "allowVoiceDialing" },
+    ],
+  },
+  {
+    key: "cloud",
+    title: "Cloud & Sync",
+    items: [
+      { label: "Force Encrypted Backup", field: "forceEncryptedBackup" },
+      { label: "Cloud Document Sync", field: "allowCloudDocumentSync" },
+      { label: "Cloud Keychain Sync", field: "allowCloudKeychainSync" },
+      { label: "Managed Apps Cloud Sync", field: "allowManagedAppsCloudSync" },
+    ],
+  },
+  {
+    key: "connectivity",
+    title: "Connectivity",
+    items: [
+      { label: "Bluetooth Modification", field: "allowBluetoothModification" },
+      { label: "NFC", field: "allowNFC" },
+      { label: "Personal Hotspot", field: "allowPersonalHotspot" },
+      { label: "USB Restricted Mode", field: "allowUSBRestrictedMode" },
+      { label: "VPN Creation", field: "allowVPNCreation" },
+    ],
+  },
+  {
+    key: "deviceControl",
+    title: "Device Control",
+    items: [
+      { label: "Passcode Modification", field: "allowPasscodeModification" },
+      { label: "Fingerprint/Face ID Modification", field: "allowFingerprintModification" },
+      { label: "Auto Unlock", field: "allowAutoUnlock" },
+      { label: "Erase Content & Settings", field: "allowEraseContentAndSettings" },
+      { label: "Force AirPlay Pairing Password", field: "forceAirPlayPairingPassword" },
+      { label: "Notification Modification", field: "allowNotificationsModification" },
+      { label: "Diagnostic Submission", field: "allowDiagnosticSubmission" },
+    ],
+  },
+];
+
 export function PolicyForm({ initialData, onSubmit, isPending, submitLabel = "Save Policy" }: PolicyFormProps) {
   const [name, setName] = React.useState(initialData?.name ?? "");
   const [description, setDescription] = React.useState(initialData?.description ?? "");
@@ -73,13 +273,23 @@ export function PolicyForm({ initialData, onSubmit, isPending, submitLabel = "Sa
   React.useEffect(() => {
     if (initialData?.policyType === policyType && initialData?.payload) return;
     switch (policyType) {
-      case "restriction": setPayload({ type: "restriction", ...defaultRestrictions }); break;
+      case "restriction": setPayload({ type: "restriction", ...defaultAndroidRestrictions, ...defaultiOSRestrictions }); break;
       case "passcode": setPayload({ type: "passcode", ...defaultPasscode }); break;
       case "wifi": setPayload({ type: "wifi", ...defaultWifi }); break;
       case "kiosk": setPayload({ type: "kiosk", ...defaultKiosk }); break;
       case "vpn": setPayload({ type: "vpn", protocol: "ikev2", server: "", username: "" }); break;
     }
   }, [policyType]);
+
+  const [openSections, setOpenSections] = React.useState<Record<string, boolean>>({});
+
+  const toggleSection = (key: string) => {
+    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleRestrictionChange = (field: string, value: boolean) => {
+    setPayload((prev) => ({ ...prev, [field]: value }));
+  };
 
   const updatePayload = (key: string, value: unknown) => {
     setPayload((prev) => ({ ...prev, [key]: value }));
@@ -140,31 +350,68 @@ export function PolicyForm({ initialData, onSubmit, isPending, submitLabel = "Sa
         <CardContent className="space-y-3">
           {policyType === "restriction" && (
             <>
-              <Toggle checked={!!payload.camera} onChange={(v) => updatePayload("camera", v)} label="Allow Camera" />
-              <Toggle checked={!!payload.screenshot} onChange={(v) => updatePayload("screenshot", v)} label="Allow Screenshot" />
-              <Toggle checked={!!payload.usb} onChange={(v) => updatePayload("usb", v)} label="Allow USB" />
-              <Toggle checked={!!payload.bluetooth} onChange={(v) => updatePayload("bluetooth", v)} label="Allow Bluetooth" />
-              <Toggle checked={!!payload.wifiConfig} onChange={(v) => updatePayload("wifiConfig", v)} label="Allow WiFi Configuration" />
-              <Toggle checked={!!payload.factoryReset} onChange={(v) => updatePayload("factoryReset", v)} label="Allow Factory Reset" />
-              <Toggle checked={!!payload.appInstall} onChange={(v) => updatePayload("appInstall", v)} label="Allow App Install" />
-              <Toggle checked={!!payload.developerOptions} onChange={(v) => updatePayload("developerOptions", v)} label="Allow Developer Options" />
-              <Toggle checked={!!payload.safeMode} onChange={(v) => updatePayload("safeMode", v)} label="Allow Safe Mode" />
-              <Toggle checked={!!payload.clipboard} onChange={(v) => updatePayload("clipboard", v)} label="Allow Clipboard" />
-              <Toggle checked={!!payload.volume} onChange={(v) => updatePayload("volume", v)} label="Allow Volume Control" />
+              {platform === "android" && (
+                <div className="space-y-4">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Android Restrictions</p>
+                  {androidCategories.map((cat) => (
+                    <div key={cat.key} className="space-y-2">
+                      <h4
+                        className="font-medium text-sm cursor-pointer select-none flex items-center gap-1 hover:text-primary"
+                        onClick={() => toggleSection(cat.key)}
+                      >
+                        <span className="text-xs">{openSections[cat.key] ? "\u25BC" : "\u25B6"}</span>
+                        {cat.title}
+                        <span className="text-xs text-muted-foreground ml-1">({cat.items.length})</span>
+                      </h4>
+                      {openSections[cat.key] && (
+                        <div className="space-y-1 pl-4 border-l-2 border-muted">
+                          {cat.items.map((item) => (
+                            <RestrictionToggle
+                              key={item.field}
+                              label={item.label}
+                              field={item.field}
+                              value={!!payload[item.field]}
+                              onChange={handleRestrictionChange}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
               {platform === "ios" && (
-                <>
-                  <Separator />
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">iOS-Specific Restrictions</p>
-                  <Toggle checked={payload.allowSiri !== false} onChange={(v) => updatePayload("allowSiri", v)} label="Allow Siri" />
-                  <Toggle checked={payload.allowAirDrop !== false} onChange={(v) => updatePayload("allowAirDrop", v)} label="Allow AirDrop" />
-                  <Toggle checked={payload.allowSafari !== false} onChange={(v) => updatePayload("allowSafari", v)} label="Allow Safari" />
-                  <Toggle checked={payload.allowFaceTime !== false} onChange={(v) => updatePayload("allowFaceTime", v)} label="Allow FaceTime" />
-                  <Toggle checked={payload.allowiCloud !== false} onChange={(v) => updatePayload("allowiCloud", v)} label="Allow iCloud Backup" />
-                  <Toggle checked={payload.allowGameCenter !== false} onChange={(v) => updatePayload("allowGameCenter", v)} label="Allow Game Center" />
-                  <Toggle checked={payload.allowPassbook !== false} onChange={(v) => updatePayload("allowPassbook", v)} label="Allow Passbook in Lock Screen" />
-                  <Toggle checked={payload.allowITunes !== false} onChange={(v) => updatePayload("allowITunes", v)} label="Allow iTunes Store" />
-                  <Toggle checked={payload.allowInAppPurchases !== false} onChange={(v) => updatePayload("allowInAppPurchases", v)} label="Allow In-App Purchases" />
-                </>
+                <div className="space-y-4">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">iOS Restrictions</p>
+                  {iosCategories.map((cat) => (
+                    <div key={cat.key} className="space-y-2">
+                      <h4
+                        className="font-medium text-sm cursor-pointer select-none flex items-center gap-1 hover:text-primary"
+                        onClick={() => toggleSection(cat.key)}
+                      >
+                        <span className="text-xs">{openSections[cat.key] ? "\u25BC" : "\u25B6"}</span>
+                        {cat.title}
+                        <span className="text-xs text-muted-foreground ml-1">({cat.items.length})</span>
+                      </h4>
+                      {openSections[cat.key] && (
+                        <div className="space-y-1 pl-4 border-l-2 border-muted">
+                          {cat.items.map((item) => (
+                            <RestrictionToggle
+                              key={item.field}
+                              label={item.label}
+                              field={item.field}
+                              value={!!payload[item.field]}
+                              onChange={handleRestrictionChange}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {platform !== "android" && platform !== "ios" && (
+                <p className="text-sm text-muted-foreground">Restriction policies are available for Android and iOS platforms.</p>
               )}
             </>
           )}

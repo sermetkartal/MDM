@@ -31,6 +31,7 @@ enum class PasswordQuality {
 }
 
 data class RestrictionPolicy(
+    // Core restrictions
     val cameraDisabled: Boolean = false,
     val screenCaptureDisabled: Boolean = false,
     val usbFileTransferDisabled: Boolean = false,
@@ -42,6 +43,70 @@ data class RestrictionPolicy(
     val debuggingDisabled: Boolean = false,
     val locationSharingDisabled: Boolean = false,
     val clipboardDisabled: Boolean = false,
+
+    // User & Account
+    val addManagedProfileDisabled: Boolean = false,
+    val addUserDisabled: Boolean = false,
+    val removeManagedProfileDisabled: Boolean = false,
+    val removeUserDisabled: Boolean = false,
+    val userSwitchDisabled: Boolean = false,
+    val modifyAccountsDisabled: Boolean = false,
+    val outgoingCallsDisabled: Boolean = false,
+    val smsDisabled: Boolean = false,
+
+    // Configuration & Settings
+    val adjustVolumeDisabled: Boolean = false,
+    val configBrightnessDisabled: Boolean = false,
+    val configCellBroadcastsDisabled: Boolean = false,
+    val configCredentialsDisabled: Boolean = false,
+    val configDateTimeDisabled: Boolean = false,
+    val configDefaultAppsDisabled: Boolean = false,
+    val configLocaleDisabled: Boolean = false,
+    val configLocationDisabled: Boolean = false,
+    val configMobileNetworksDisabled: Boolean = false,
+    val configPrivateDnsDisabled: Boolean = false,
+    val configScreenTimeoutDisabled: Boolean = false,
+    val configTetheringDisabled: Boolean = false,
+    val configVpnDisabled: Boolean = false,
+
+    // Hardware & Physical
+    val mountPhysicalMediaDisabled: Boolean = false,
+    val nfcDisabled: Boolean = false,
+    val outgoingBeamDisabled: Boolean = false,
+    val wifiDirectDisabled: Boolean = false,
+    val wifiTetheringDisabled: Boolean = false,
+    val safeBootDisabled: Boolean = false,
+    val printingDisabled: Boolean = false,
+
+    // Security & Protection
+    val networkResetDisabled: Boolean = false,
+    val systemErrorDialogsDisabled: Boolean = false,
+    val unifiedPasswordDisabled: Boolean = false,
+    val contentCaptureDisabled: Boolean = false,
+    val contentSuggestionsDisabled: Boolean = false,
+    val installUnknownSourcesDisabled: Boolean = false,
+    val installUnknownSourcesGloballyDisabled: Boolean = false,
+
+    // Apps & Data
+    val appsControlDisabled: Boolean = false,
+    val grantAdminDisabled: Boolean = false,
+    val createWindowsDisabled: Boolean = false,
+    val crossProfileCopyPasteDisabled: Boolean = false,
+    val shareIntoManagedProfileDisabled: Boolean = false,
+    val autofillDisabled: Boolean = false,
+
+    // Other
+    val ambientDisplayDisabled: Boolean = false,
+    val funDisabled: Boolean = false,
+    val dataRoamingDisabled: Boolean = false,
+    val microphoneToggleDisabled: Boolean = false,
+    val bluetoothSharingDisabled: Boolean = false,
+
+    // DPM Direct Methods
+    val usbDataSignalingDisabled: Boolean = false,
+    val statusBarDisabled: Boolean = false,
+    val keyguardDisabled: Boolean = false,
+    val autoTimeRequired: Boolean = false,
 )
 
 data class NetworkPolicy(

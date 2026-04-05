@@ -191,6 +191,7 @@ func GeneratePasscodeProfile(cfg PasscodeConfig) []byte {
 }
 
 type RestrictionConfig struct {
+	// Existing
 	AllowCamera      *bool
 	AllowScreenShot  *bool
 	AllowAppInstall  *bool
@@ -201,13 +202,58 @@ type RestrictionConfig struct {
 	AllowFaceTime    *bool
 	AllowPassbook    *bool
 	AllowGameCenter  *bool
+
+	// Media & Content
+	AllowInAppPurchases          *bool
+	AllowExplicitContent         *bool
+	AllowBookstore               *bool
+	AllowBookstoreErotica        *bool
+	AllowMultiplayerGaming       *bool
+	AllowAddingGameCenterFriends *bool
+	AllowSiriWhileLocked         *bool
+	AllowVoiceDialing            *bool
+
+	// Cloud & Sync
+	ForceEncryptedBackup         *bool
+	AllowCloudDocumentSync       *bool
+	AllowCloudKeychainSync       *bool
+	AllowManagedAppsCloudSync    *bool
+
+	// Bluetooth & Connectivity
+	AllowBluetoothModification   *bool
+	AllowNFC                     *bool
+	AllowPersonalHotspot         *bool
+
+	// Accessibility & Input
+	AllowPasscodeModification    *bool
+	AllowFingerprintModification *bool
+
+	// Device Control
+	AllowAutoUnlock              *bool
+	AllowEraseContentAndSettings *bool
+	ForceAirPlayPairingPassword  *bool
+
+	// Other
+	AllowUSBRestrictedMode         *bool
+	AllowVPNCreation               *bool
+	AllowDiagnosticSubmission      *bool
+	AllowNotificationsModification *bool
 }
 
 func GenerateRestrictionProfile(cfg RestrictionConfig) []byte {
 	payloadUUID := uuid.New().String()
 
+	// boolStr returns "true" if pointer is nil (default allow) or true, "false" otherwise.
 	boolStr := func(b *bool) string {
 		if b == nil || *b {
+			return "true"
+		}
+		return "false"
+	}
+
+	// forceBoolStr returns "false" if pointer is nil (default off) or false, "true" if explicitly set.
+	forceBoolStr := func(b *bool) string {
+		if b != nil && *b {
 			return "true"
 		}
 		return "false"
@@ -242,7 +288,56 @@ func GenerateRestrictionProfile(cfg RestrictionConfig) []byte {
 		<%s/>
 		<key>allowGameCenter</key>
 		<%s/>
+		<key>allowInAppPurchases</key>
+		<%s/>
+		<key>allowExplicitContent</key>
+		<%s/>
+		<key>allowBookstore</key>
+		<%s/>
+		<key>allowBookstoreErotica</key>
+		<%s/>
+		<key>allowMultiplayerGaming</key>
+		<%s/>
+		<key>allowAddingGameCenterFriends</key>
+		<%s/>
+		<key>allowAssistantWhileLocked</key>
+		<%s/>
+		<key>allowVoiceDialing</key>
+		<%s/>
+		<key>forceEncryptedBackup</key>
+		<%s/>
+		<key>allowCloudDocumentSync</key>
+		<%s/>
+		<key>allowCloudKeychainSync</key>
+		<%s/>
+		<key>allowManagedAppsCloudSync</key>
+		<%s/>
+		<key>allowBluetoothModification</key>
+		<%s/>
+		<key>allowNFC</key>
+		<%s/>
+		<key>allowPersonalHotspotModification</key>
+		<%s/>
+		<key>allowPasscodeModification</key>
+		<%s/>
+		<key>allowFingerprintModification</key>
+		<%s/>
+		<key>allowAutoUnlock</key>
+		<%s/>
+		<key>allowEraseContentAndSettings</key>
+		<%s/>
+		<key>forceAirPlayOutgoingRequestsPairingPassword</key>
+		<%s/>
+		<key>allowUSBRestrictedMode</key>
+		<%s/>
+		<key>allowVPNCreation</key>
+		<%s/>
+		<key>allowDiagnosticSubmission</key>
+		<%s/>
+		<key>allowNotificationsModification</key>
+		<%s/>
 	</dict>`, payloadUUID,
+		// Existing
 		boolStr(cfg.AllowCamera),
 		boolStr(cfg.AllowScreenShot),
 		boolStr(cfg.AllowAppInstall),
@@ -253,6 +348,37 @@ func GenerateRestrictionProfile(cfg RestrictionConfig) []byte {
 		boolStr(cfg.AllowFaceTime),
 		boolStr(cfg.AllowPassbook),
 		boolStr(cfg.AllowGameCenter),
+		// Media & Content
+		boolStr(cfg.AllowInAppPurchases),
+		boolStr(cfg.AllowExplicitContent),
+		boolStr(cfg.AllowBookstore),
+		boolStr(cfg.AllowBookstoreErotica),
+		boolStr(cfg.AllowMultiplayerGaming),
+		boolStr(cfg.AllowAddingGameCenterFriends),
+		boolStr(cfg.AllowSiriWhileLocked),
+		boolStr(cfg.AllowVoiceDialing),
+		// Cloud & Sync (ForceEncryptedBackup defaults to false/off)
+		forceBoolStr(cfg.ForceEncryptedBackup),
+		boolStr(cfg.AllowCloudDocumentSync),
+		boolStr(cfg.AllowCloudKeychainSync),
+		boolStr(cfg.AllowManagedAppsCloudSync),
+		// Bluetooth & Connectivity
+		boolStr(cfg.AllowBluetoothModification),
+		boolStr(cfg.AllowNFC),
+		boolStr(cfg.AllowPersonalHotspot),
+		// Accessibility & Input
+		boolStr(cfg.AllowPasscodeModification),
+		boolStr(cfg.AllowFingerprintModification),
+		// Device Control
+		boolStr(cfg.AllowAutoUnlock),
+		boolStr(cfg.AllowEraseContentAndSettings),
+		// ForceAirPlayPairingPassword defaults to false/off
+		forceBoolStr(cfg.ForceAirPlayPairingPassword),
+		// Other
+		boolStr(cfg.AllowUSBRestrictedMode),
+		boolStr(cfg.AllowVPNCreation),
+		boolStr(cfg.AllowDiagnosticSubmission),
+		boolStr(cfg.AllowNotificationsModification),
 	)
 
 	return []byte(profileWrapper(
