@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { Shield, Plus, Pencil, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +15,6 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { api } from "@/lib/api-client";
 
 interface Role {
   id: string;
@@ -40,29 +39,48 @@ const RESOURCE_GROUPS: Record<string, string[]> = {
   Enrollment: ["enrollment:read", "enrollment:write", "enrollment:delete"],
 };
 
+const DEMO_ROLES: Role[] = [
+  {
+    id: "r1",
+    name: "Admin",
+    description: "Full system access",
+    permissions: Object.values(RESOURCE_GROUPS).flat(),
+    isSystem: true,
+    createdAt: "2024-01-01T00:00:00Z",
+  },
+  {
+    id: "r2",
+    name: "Device Manager",
+    description: "Manage devices and run commands",
+    permissions: ["devices:read", "devices:write", "commands:read", "commands:write", "commands:lock", "groups:read"],
+    isSystem: true,
+    createdAt: "2024-01-01T00:00:00Z",
+  },
+  {
+    id: "r3",
+    name: "Viewer",
+    description: "Read-only access to all resources",
+    permissions: ["devices:read", "policies:read", "apps:read", "groups:read", "compliance:read", "reports:read", "audit:read"],
+    isSystem: true,
+    createdAt: "2024-01-01T00:00:00Z",
+  },
+  {
+    id: "r4",
+    name: "Fleet Manager",
+    description: "Custom role for field operations team",
+    permissions: ["devices:read", "devices:write", "commands:read", "commands:write", "groups:read", "reports:read", "reports:export"],
+    isSystem: false,
+    createdAt: "2024-06-15T00:00:00Z",
+  },
+];
+
 export default function RolesPage() {
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [roles, setRoles] = useState<Role[]>(DEMO_ROLES);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedPermissions, setSelectedPermissions] = useState<Set<string>>(new Set());
-
-  const fetchRoles = useCallback(async () => {
-    try {
-      const res = await api.get<{ data: Role[] }>("/v1/roles");
-      setRoles(res.data);
-    } catch {
-      // handle error
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchRoles();
-  }, [fetchRoles]);
 
   function openCreate() {
     setEditingRole(null);
@@ -105,38 +123,28 @@ export default function RolesPage() {
     });
   }
 
-  async function handleSave() {
+  function handleSave() {
     const permissions = Array.from(selectedPermissions);
-    try {
-      if (editingRole) {
-        await api.patch(`/v1/roles/${editingRole.id}`, { name, description, permissions });
-      } else {
-        await api.post("/v1/roles", { name, description, permissions });
-      }
-      setDialogOpen(false);
-      fetchRoles();
-    } catch {
-      // handle error
+    if (editingRole) {
+      setRoles(prev => prev.map(r => r.id === editingRole.id ? { ...r, name, description, permissions } : r));
+      alert("Role updated (demo mode)");
+    } else {
+      setRoles(prev => [...prev, {
+        id: `r-${Date.now()}`,
+        name,
+        description,
+        permissions,
+        isSystem: false,
+        createdAt: new Date().toISOString(),
+      }]);
+      alert("Role created (demo mode)");
     }
+    setDialogOpen(false);
   }
 
-  async function handleDelete(roleId: string) {
+  function handleDelete(roleId: string) {
     if (!confirm("Are you sure you want to delete this role?")) return;
-    try {
-      await api.delete(`/v1/roles/${roleId}`);
-      fetchRoles();
-    } catch {
-      // handle error
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <PageHeader title="Roles" description="Manage roles and permissions" />
-        <div className="text-muted-foreground">Loading...</div>
-      </div>
-    );
+    setRoles(prev => prev.filter(r => r.id !== roleId));
   }
 
   return (

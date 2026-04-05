@@ -143,7 +143,7 @@ export default function EnrollmentPage() {
               </select>
             </div>
           </div>
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => alert("Configuration saved (demo mode)")}>
             <Settings className="mr-2 h-4 w-4" />
             Save DEP Configuration
           </Button>
@@ -171,7 +171,7 @@ export default function EnrollmentPage() {
               <option value="">Select a policy...</option>
             </select>
           </div>
-          <Button variant="outline">Save Zero-Touch Config</Button>
+          <Button variant="outline" onClick={() => alert("Configuration saved (demo mode)")}>Save Zero-Touch Config</Button>
         </CardContent>
       </Card>
     </div>

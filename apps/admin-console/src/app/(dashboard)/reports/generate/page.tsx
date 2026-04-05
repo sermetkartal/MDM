@@ -7,9 +7,14 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { useReportTemplates, useReportJob } from "@/hooks/queries/use-reports";
-import { useGenerateReport } from "@/hooks/mutations/use-generate-report";
 import type { ReportFormat } from "@/lib/types";
+
+const DEMO_TEMPLATES = [
+  { id: "t1", name: "Device Inventory", description: "Full inventory of all managed devices" },
+  { id: "t2", name: "Compliance Summary", description: "Overview of device compliance status" },
+  { id: "t3", name: "Security Incidents", description: "Security events and violations" },
+  { id: "t4", name: "App Distribution", description: "App installation status across fleet" },
+];
 
 export default function GenerateReportPage() {
   const router = useRouter();
@@ -20,49 +25,32 @@ export default function GenerateReportPage() {
   const [format, setFormat] = React.useState<ReportFormat>("pdf");
   const [dateFrom, setDateFrom] = React.useState("");
   const [dateTo, setDateTo] = React.useState("");
-  const [activeJobId, setActiveJobId] = React.useState<string | null>(null);
+  const [jobState, setJobState] = React.useState<"idle" | "generating" | "completed" | "failed">("idle");
+  const [progress, setProgress] = React.useState(0);
 
-  const { data: templateData } = useReportTemplates();
-  const templates = templateData?.templates ?? [];
+  const templates = DEMO_TEMPLATES;
   const selectedTemplate = templates.find((t) => t.id === templateId);
-
-  const generateMutation = useGenerateReport();
-
-  const { data: currentJob } = useReportJob(activeJobId ?? "", {
-    enabled: !!activeJobId,
-    refetchInterval: activeJobId ? 1000 : false,
-  });
 
   const handleGenerate = () => {
     if (!templateId) return;
+    setJobState("generating");
+    setProgress(0);
 
-    generateMutation.mutate(
-      {
-        template_id: templateId,
-        org_id: "00000000-0000-0000-0000-000000000001", // TODO: from auth context
-        format,
-        params: {
-          from: dateFrom || undefined,
-          to: dateTo || undefined,
-        },
-      },
-      {
-        onSuccess: (data) => {
-          setActiveJobId(data.job_id);
-        },
-      },
-    );
+    const interval = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          setJobState("completed");
+          return 100;
+        }
+        return prev + 20;
+      });
+    }, 400);
   };
 
   const handleDownload = () => {
-    if (currentJob?.download_url) {
-      window.open(currentJob.download_url, "_blank");
-    }
+    alert(`Downloading report as ${format.toUpperCase()} (demo mode)`);
   };
-
-  const progressPercent = currentJob?.progress_percent ?? 0;
-  const isRunning =
-    currentJob?.status === "queued" || currentJob?.status === "processing";
 
   return (
     <div className="space-y-6">
@@ -139,14 +127,9 @@ export default function GenerateReportPage() {
           <Button
             className="w-full"
             onClick={handleGenerate}
-            disabled={!templateId || generateMutation.isPending || isRunning}
+            disabled={!templateId || jobState === "generating"}
           >
-            {generateMutation.isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Submitting...
-              </>
-            ) : isRunning ? (
+            {jobState === "generating" ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Generating...
@@ -159,14 +142,14 @@ export default function GenerateReportPage() {
 
         {/* Progress / Result */}
         <Card className="flex flex-col items-center justify-center p-6">
-          {!activeJobId ? (
+          {jobState === "idle" ? (
             <div className="text-center text-muted-foreground">
               <p className="text-lg font-medium">Ready to generate</p>
               <p className="text-sm">
                 Select a template and click Generate to start
               </p>
             </div>
-          ) : currentJob?.status === "completed" ? (
+          ) : jobState === "completed" ? (
             <div className="space-y-4 text-center">
               <CheckCircle className="mx-auto h-16 w-16 text-green-500" />
               <p className="text-lg font-semibold">Report Ready</p>
@@ -177,20 +160,18 @@ export default function GenerateReportPage() {
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={() =>
-                    router.push(`/reports/${activeJobId}`)
-                  }
+                  onClick={() => router.push(`/reports/demo-report`)}
                 >
                   View Report
                 </Button>
               </div>
             </div>
-          ) : currentJob?.status === "failed" ? (
+          ) : jobState === "failed" ? (
             <div className="space-y-4 text-center">
               <XCircle className="mx-auto h-16 w-16 text-red-500" />
               <p className="text-lg font-semibold">Generation Failed</p>
               <p className="text-sm text-muted-foreground">
-                {currentJob.error ?? "An unexpected error occurred"}
+                An unexpected error occurred
               </p>
               <Button variant="outline" onClick={handleGenerate}>
                 Retry
@@ -200,21 +181,17 @@ export default function GenerateReportPage() {
             <div className="w-full space-y-4">
               <div className="text-center">
                 <Loader2 className="mx-auto mb-2 h-12 w-12 animate-spin text-primary" />
-                <p className="text-lg font-semibold">
-                  {currentJob?.status === "queued"
-                    ? "Queued..."
-                    : "Generating Report..."}
-                </p>
+                <p className="text-lg font-semibold">Generating Report...</p>
               </div>
               <div className="w-full">
                 <div className="mb-1 flex justify-between text-sm text-muted-foreground">
                   <span>Progress</span>
-                  <span>{progressPercent}%</span>
+                  <span>{progress}%</span>
                 </div>
                 <div className="h-3 w-full overflow-hidden rounded-full bg-secondary">
                   <div
                     className="h-full rounded-full bg-primary transition-all duration-300"
-                    style={{ width: `${progressPercent}%` }}
+                    style={{ width: `${progress}%` }}
                   />
                 </div>
               </div>

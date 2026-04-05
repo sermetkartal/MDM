@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Users, Plus, UserX, Shield } from "lucide-react";
+import { useState } from "react";
+import { Plus, UserX, Shield } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,104 +23,71 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { api } from "@/lib/api-client";
-
 interface User {
   id: string;
   email: string;
-  firstName: string | null;
-  lastName: string | null;
-  isActive: boolean;
-  roleId: string;
+  display_name: string;
+  status: string;
   lastLoginAt: string | null;
-  createdAt: string;
+  roles: string[];
 }
 
 interface Role {
   id: string;
   name: string;
-  description: string | null;
-  isSystem: boolean;
+  description: string;
+  is_system: boolean;
+  permissions: string[];
 }
 
+const dummyUsers: User[] = [
+  { id: "u1", email: "admin@mdm.local", display_name: "System Admin", status: "active", lastLoginAt: new Date().toISOString(), roles: ["org_admin"] },
+  { id: "u2", email: "john@company.com", display_name: "John Davis", status: "active", lastLoginAt: new Date(Date.now() - 86400000).toISOString(), roles: ["device_admin"] },
+  { id: "u3", email: "sarah@company.com", display_name: "Sarah Miller", status: "active", lastLoginAt: new Date(Date.now() - 172800000).toISOString(), roles: ["helpdesk"] },
+  { id: "u4", email: "mike@company.com", display_name: "Mike Chen", status: "suspended", lastLoginAt: null, roles: ["viewer"] },
+];
+
+const dummyRoles: Role[] = [
+  { id: "r1", name: "org_admin", description: "Full access", is_system: true, permissions: ["*:*"] },
+  { id: "r2", name: "device_admin", description: "Manage devices and commands", is_system: true, permissions: ["devices:*", "commands:*"] },
+  { id: "r3", name: "helpdesk", description: "View devices, lock, message", is_system: true, permissions: ["devices:read", "commands:lock"] },
+  { id: "r4", name: "viewer", description: "Read-only access", is_system: true, permissions: ["*:read"] },
+];
+
 export default function UsersPage() {
-  const [userList, setUserList] = useState<User[]>([]);
-  const [roleList, setRoleList] = useState<Role[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [userList, setUserList] = useState<User[]>(dummyUsers);
+  const [roleList] = useState<Role[]>(dummyRoles);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("");
 
-  const fetchData = useCallback(async () => {
-    try {
-      const [usersRes, rolesRes] = await Promise.all([
-        api.get<{ data: User[] }>("/v1/roles/../users").catch(() => ({ data: [] as User[] })),
-        api.get<{ data: Role[] }>("/v1/roles"),
-      ]);
-      // Users endpoint - try the settings users endpoint
-      try {
-        const uRes = await api.get<{ data: User[] }>("/v1/users");
-        setUserList(uRes.data);
-      } catch {
-        setUserList([]);
-      }
-      setRoleList(rolesRes.data);
-    } catch {
-      // handle error
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  function getRoleName(roleId: string): string {
-    return roleList.find((r) => r.id === roleId)?.name ?? "Unknown";
+  function getRoleName(roles: string[]): string {
+    return roles[0] ?? "Unknown";
   }
 
-  async function handleAssignRole(userId: string, roleId: string) {
-    try {
-      await api.post(`/v1/roles/${roleId}/users`, { userId });
-      setRoleDialogOpen(false);
-      fetchData();
-    } catch {
-      // handle error
-    }
-  }
-
-  async function handleDeactivate(userId: string) {
-    if (!confirm("Are you sure you want to deactivate this user?")) return;
-    try {
-      await api.patch(`/v1/users/${userId}`, { isActive: false });
-      fetchData();
-    } catch {
-      // handle error
-    }
-  }
-
-  async function handleInvite() {
-    try {
-      await api.post("/v1/users/invite", { email: inviteEmail, roleId: inviteRole });
-      setInviteOpen(false);
-      setInviteEmail("");
-      setInviteRole("");
-      fetchData();
-    } catch {
-      // handle error
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <PageHeader title="Users" description="Manage admin users and role assignments" />
-        <div className="text-muted-foreground">Loading...</div>
-      </div>
+  function handleAssignRole(userId: string, roleId: string) {
+    alert("Demo mode");
+    setUserList((prev) =>
+      prev.map((u) => (u.id === userId ? { ...u, roles: [roleList.find((r) => r.id === roleId)?.name ?? u.roles[0]] } : u))
     );
+    setRoleDialogOpen(false);
+  }
+
+  function handleDeactivate(userId: string) {
+    if (!confirm("Are you sure you want to deactivate this user?")) return;
+    alert("Demo mode");
+    setUserList((prev) =>
+      prev.map((u) => (u.id === userId ? { ...u, status: "suspended" } : u))
+    );
+  }
+
+  function handleInvite() {
+    alert("Demo mode");
+    setInviteOpen(false);
+    setInviteEmail("");
+    setInviteRole("");
   }
 
   return (
@@ -161,17 +128,17 @@ export default function UsersPage() {
                     <TableCell>
                       <div>
                         <p className="font-medium">
-                          {[user.firstName, user.lastName].filter(Boolean).join(" ") || user.email}
+                          {user.display_name || user.email}
                         </p>
                         <p className="text-sm text-muted-foreground">{user.email}</p>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">{getRoleName(user.roleId)}</Badge>
+                      <Badge variant="outline">{getRoleName(user.roles)}</Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={user.isActive ? "default" : "secondary"}>
-                        {user.isActive ? "Active" : "Inactive"}
+                      <Badge variant={user.status === "active" ? "default" : "secondary"}>
+                        {user.status === "active" ? "Active" : "Suspended"}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
@@ -192,7 +159,7 @@ export default function UsersPage() {
                           <Shield className="h-3.5 w-3.5 mr-1" />
                           Role
                         </Button>
-                        {user.isActive && (
+                        {user.status === "active" && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -240,7 +207,7 @@ export default function UsersPage() {
                 <option value="">Select a role...</option>
                 {roleList.map((role) => (
                   <option key={role.id} value={role.id}>
-                    {role.name} {role.isSystem ? "(system)" : ""}
+                    {role.name} {role.is_system ? "(system)" : ""}
                   </option>
                 ))}
               </select>
@@ -269,7 +236,7 @@ export default function UsersPage() {
               <button
                 key={role.id}
                 className={`w-full text-left rounded-md border p-3 text-sm transition-colors hover:bg-muted/50 ${
-                  selectedUser?.roleId === role.id ? "border-primary bg-primary/5" : "border-border"
+                  selectedUser?.roles[0] === role.name ? "border-primary bg-primary/5" : "border-border"
                 }`}
                 onClick={() => {
                   if (selectedUser) handleAssignRole(selectedUser.id, role.id);
@@ -278,11 +245,11 @@ export default function UsersPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="font-medium">{role.name}</span>
-                    {role.isSystem && (
+                    {role.is_system && (
                       <Badge variant="secondary" className="ml-2 text-xs">System</Badge>
                     )}
                   </div>
-                  {selectedUser?.roleId === role.id && (
+                  {selectedUser?.roles[0] === role.name && (
                     <Badge variant="default" className="text-xs">Current</Badge>
                   )}
                 </div>

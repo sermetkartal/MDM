@@ -8,15 +8,24 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  useLdapIntegrations,
-  useCreateLdapIntegration,
-  useTestLdapConnection,
-  useSyncLdap,
-  useLdapSyncHistory,
-  useDeleteLdapIntegration,
-} from "@/hooks/queries/use-groups";
-import type { LdapConfig, LdapIntegration } from "@/lib/types";
+import type { LdapConfig } from "@/lib/types";
+
+interface LdapIntegration {
+  id: string;
+  name: string;
+  config: LdapConfig;
+  isActive: boolean;
+  lastSyncAt: string | null;
+}
+
+interface SyncHistoryEntry {
+  id: string;
+  startedAt: string;
+  status: string;
+  usersSynced: number;
+  groupsSynced: number;
+  errors: string[];
+}
 
 const DEFAULT_CONFIG: LdapConfig = {
   url: "",
@@ -39,17 +48,44 @@ const DEFAULT_CONFIG: LdapConfig = {
   syncIntervalMinutes: 15,
 };
 
+const DEMO_INTEGRATIONS: LdapIntegration[] = [
+  {
+    id: "ldap-1",
+    name: "Active Directory",
+    config: {
+      ...DEFAULT_CONFIG,
+      url: "ldaps://ad.company.com:636",
+      bindDn: "CN=MDM Service,OU=Services,DC=company,DC=com",
+      baseDn: "DC=company,DC=com",
+      bindPassword: "********",
+    },
+    isActive: true,
+    lastSyncAt: new Date(Date.now() - 3600000).toISOString(),
+  },
+];
+
+const DEMO_HISTORY: SyncHistoryEntry[] = [
+  { id: "sh1", startedAt: new Date(Date.now() - 3600000).toISOString(), status: "completed", usersSynced: 156, groupsSynced: 12, errors: [] },
+  { id: "sh2", startedAt: new Date(Date.now() - 7200000).toISOString(), status: "completed", usersSynced: 155, groupsSynced: 12, errors: [] },
+  { id: "sh3", startedAt: new Date(Date.now() - 86400000).toISOString(), status: "failed", usersSynced: 0, groupsSynced: 0, errors: ["Connection timeout"] },
+];
+
 function LdapConfigForm({ onSave, saving }: { onSave: (name: string, config: LdapConfig) => void; saving: boolean }) {
   const [name, setName] = React.useState("Active Directory");
   const [config, setConfig] = React.useState<LdapConfig>(DEFAULT_CONFIG);
-  const testConnection = useTestLdapConnection();
+  const [testResult, setTestResult] = React.useState<{ success: boolean; message: string } | null>(null);
+  const [testing, setTesting] = React.useState(false);
 
   const updateConfig = (updates: Partial<LdapConfig>) => {
     setConfig((prev) => ({ ...prev, ...updates }));
   };
 
   const handleTest = () => {
-    testConnection.mutate(config);
+    setTesting(true);
+    setTimeout(() => {
+      setTestResult({ success: true, message: "Connection successful!" });
+      setTesting(false);
+    }, 800);
   };
 
   return (
@@ -239,20 +275,20 @@ function LdapConfigForm({ onSave, saving }: { onSave: (name: string, config: Lda
       </Card>
 
       <div className="flex items-center gap-3">
-        <Button variant="outline" onClick={handleTest} disabled={testConnection.isPending || !config.url}>
-          {testConnection.isPending ? "Testing..." : "Test Connection"}
+        <Button variant="outline" onClick={handleTest} disabled={testing || !config.url}>
+          {testing ? "Testing..." : "Test Connection"}
         </Button>
-        {testConnection.data && (
+        {testResult && (
           <div className="flex items-center gap-2 text-sm">
-            {testConnection.data.success ? (
+            {testResult.success ? (
               <>
                 <CheckCircle2 className="h-4 w-4 text-green-500" />
-                <span className="text-green-600">{testConnection.data.message}</span>
+                <span className="text-green-600">{testResult.message}</span>
               </>
             ) : (
               <>
                 <XCircle className="h-4 w-4 text-destructive" />
-                <span className="text-destructive">{testConnection.data.message}</span>
+                <span className="text-destructive">{testResult.message}</span>
               </>
             )}
           </div>
@@ -269,21 +305,23 @@ function LdapConfigForm({ onSave, saving }: { onSave: (name: string, config: Lda
   );
 }
 
-function IntegrationCard({ integration }: { integration: LdapIntegration }) {
-  const syncMutation = useSyncLdap(integration.id);
-  const deleteMutation = useDeleteLdapIntegration();
-  const { data: historyData } = useLdapSyncHistory(integration.id);
+function IntegrationCard({ integration, onDelete }: { integration: LdapIntegration; onDelete: (id: string) => void }) {
   const [showHistory, setShowHistory] = React.useState(false);
-
-  const history = historyData?.data ?? [];
+  const [syncResult, setSyncResult] = React.useState<{ status: string; usersSynced: number; groupsSynced: number; errors: string[] } | null>(null);
+  const [syncing, setSyncing] = React.useState(false);
 
   const handleSync = () => {
-    syncMutation.mutate();
+    setSyncing(true);
+    setTimeout(() => {
+      setSyncResult({ status: "completed", usersSynced: 156, groupsSynced: 12, errors: [] });
+      setSyncing(false);
+      alert("Sync completed: 156 users, 12 groups");
+    }, 800);
   };
 
   const handleDelete = () => {
     if (confirm("Are you sure you want to delete this LDAP integration?")) {
-      deleteMutation.mutate(integration.id);
+      onDelete(integration.id);
     }
   };
 
@@ -292,7 +330,7 @@ function IntegrationCard({ integration }: { integration: LdapIntegration }) {
       <CardHeader className="flex flex-row items-start justify-between">
         <div>
           <CardTitle className="text-base">{integration.name}</CardTitle>
-          <CardDescription>{(integration.config as any).url}</CardDescription>
+          <CardDescription>{integration.config.url}</CardDescription>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant={integration.isActive ? "default" : "secondary"}>
@@ -313,40 +351,40 @@ function IntegrationCard({ integration }: { integration: LdapIntegration }) {
           <div>
             <span className="text-muted-foreground">Sync Interval</span>
             <div className="font-medium">
-              {(integration.config as any).syncIntervalMinutes ?? 15} min
+              {integration.config.syncIntervalMinutes ?? 15} min
             </div>
           </div>
           <div>
             <span className="text-muted-foreground">Base DN</span>
-            <div className="font-medium truncate">{(integration.config as any).baseDn}</div>
+            <div className="font-medium truncate">{integration.config.baseDn}</div>
           </div>
         </div>
 
-        {syncMutation.data && (
+        {syncResult && (
           <div className="rounded-lg border p-3 text-sm">
             <div className="flex items-center gap-2 mb-1">
-              {syncMutation.data.status === "completed" ? (
+              {syncResult.status === "completed" ? (
                 <CheckCircle2 className="h-4 w-4 text-green-500" />
               ) : (
                 <XCircle className="h-4 w-4 text-destructive" />
               )}
-              <span className="font-medium">Sync {syncMutation.data.status}</span>
+              <span className="font-medium">Sync {syncResult.status}</span>
             </div>
             <div className="text-muted-foreground">
-              {syncMutation.data.usersSynced} users, {syncMutation.data.groupsSynced} groups synced
+              {syncResult.usersSynced} users, {syncResult.groupsSynced} groups synced
             </div>
-            {syncMutation.data.errors.length > 0 && (
+            {syncResult.errors.length > 0 && (
               <div className="mt-1 text-destructive">
-                {syncMutation.data.errors.length} error(s)
+                {syncResult.errors.length} error(s)
               </div>
             )}
           </div>
         )}
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleSync} disabled={syncMutation.isPending}>
-            <RefreshCw className={`mr-1 h-3.5 w-3.5 ${syncMutation.isPending ? "animate-spin" : ""}`} />
-            {syncMutation.isPending ? "Syncing..." : "Sync Now"}
+          <Button variant="outline" size="sm" onClick={handleSync} disabled={syncing}>
+            <RefreshCw className={`mr-1 h-3.5 w-3.5 ${syncing ? "animate-spin" : ""}`} />
+            {syncing ? "Syncing..." : "Sync Now"}
           </Button>
           <Button
             variant="outline"
@@ -375,27 +413,19 @@ function IntegrationCard({ integration }: { integration: LdapIntegration }) {
                 </tr>
               </thead>
               <tbody>
-                {history.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="text-center text-muted-foreground p-4">
-                      No sync history
+                {DEMO_HISTORY.map((h) => (
+                  <tr key={h.id} className="border-b last:border-0">
+                    <td className="p-2">{new Date(h.startedAt).toLocaleString()}</td>
+                    <td className="p-2">
+                      <Badge variant={h.status === "completed" ? "default" : h.status === "failed" ? "destructive" : "secondary"}>
+                        {h.status}
+                      </Badge>
                     </td>
+                    <td className="p-2">{h.usersSynced}</td>
+                    <td className="p-2">{h.groupsSynced}</td>
+                    <td className="p-2">{h.errors?.length ?? 0}</td>
                   </tr>
-                ) : (
-                  history.map((h) => (
-                    <tr key={h.id} className="border-b last:border-0">
-                      <td className="p-2">{new Date(h.startedAt).toLocaleString()}</td>
-                      <td className="p-2">
-                        <Badge variant={h.status === "completed" ? "default" : h.status === "failed" ? "destructive" : "secondary"}>
-                          {h.status}
-                        </Badge>
-                      </td>
-                      <td className="p-2">{h.usersSynced}</td>
-                      <td className="p-2">{h.groupsSynced}</td>
-                      <td className="p-2">{h.errors?.length ?? 0}</td>
-                    </tr>
-                  ))
-                )}
+                ))}
               </tbody>
             </table>
           </div>
@@ -407,17 +437,30 @@ function IntegrationCard({ integration }: { integration: LdapIntegration }) {
 
 export default function LdapSettingsPage() {
   const router = useRouter();
-  const { data: integrationsData, isLoading } = useLdapIntegrations();
-  const createIntegration = useCreateLdapIntegration();
+  const [integrations, setIntegrations] = React.useState<LdapIntegration[]>(DEMO_INTEGRATIONS);
   const [showForm, setShowForm] = React.useState(false);
-
-  const integrations = integrationsData?.data ?? [];
+  const [saving, setSaving] = React.useState(false);
+  const isLoading = false;
 
   const handleSave = (name: string, config: LdapConfig) => {
-    createIntegration.mutate(
-      { name, config },
-      { onSuccess: () => setShowForm(false) },
-    );
+    setSaving(true);
+    setTimeout(() => {
+      const newIntegration: LdapIntegration = {
+        id: `ldap-${Date.now()}`,
+        name,
+        config,
+        isActive: true,
+        lastSyncAt: null,
+      };
+      setIntegrations((prev) => [...prev, newIntegration]);
+      setShowForm(false);
+      setSaving(false);
+      alert("LDAP integration saved (demo mode)");
+    }, 500);
+  };
+
+  const handleDelete = (id: string) => {
+    setIntegrations((prev) => prev.filter((i) => i.id !== id));
   };
 
   return (
@@ -448,7 +491,7 @@ export default function LdapSettingsPage() {
               Cancel
             </Button>
           </div>
-          <LdapConfigForm onSave={handleSave} saving={createIntegration.isPending} />
+          <LdapConfigForm onSave={handleSave} saving={saving} />
         </div>
       )}
 
@@ -473,7 +516,7 @@ export default function LdapSettingsPage() {
       ) : (
         <div className="space-y-4">
           {integrations.map((integration) => (
-            <IntegrationCard key={integration.id} integration={integration} />
+            <IntegrationCard key={integration.id} integration={integration} onDelete={handleDelete} />
           ))}
         </div>
       )}

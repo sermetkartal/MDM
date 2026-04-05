@@ -284,7 +284,7 @@ export default function GroupDetailPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-base">Assigned Policies</CardTitle>
-              <Button size="sm">
+              <Button size="sm" onClick={() => alert("Assign policy (demo mode)")}>
                 <Plus className="mr-1 h-3.5 w-3.5" />
                 Assign Policy
               </Button>

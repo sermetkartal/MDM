@@ -26,25 +26,32 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import {
-  useDeviceTelemetry,
-  useDeviceLocationHistory,
-} from "@/hooks/queries/use-device-telemetry";
-
 type TimeRange = "24h" | "7d" | "30d";
+
+const demoTelemetryData = Array.from({length: 24}, (_, i) => ({
+  time: new Date(Date.now() - (23-i) * 3600000).toISOString(),
+  battery: Math.round(100 - i * 1.5 + Math.random() * 5),
+  storage: Math.round(2000 + Math.random() * 500),
+  memory: Math.round(1000 + Math.random() * 500),
+  storage_used_percent: Math.round(35 + Math.random() * 5),
+  memory_used_percent: Math.round(45 + Math.random() * 15),
+}));
+
+const demoLocationHistory = [
+  { lat: 41.0082, lng: 28.9784, timestamp: new Date(Date.now() - 3600000).toISOString(), accuracy: 10 },
+  { lat: 41.0090, lng: 28.9790, timestamp: new Date(Date.now() - 7200000).toISOString(), accuracy: 15 },
+  { lat: 41.0075, lng: 28.9770, timestamp: new Date(Date.now() - 10800000).toISOString(), accuracy: 8 },
+];
 
 export default function DeviceTelemetryPage() {
   const params = useParams();
   const deviceId = params.deviceId as string;
   const [timeRange, setTimeRange] = useState<TimeRange>("24h");
 
-  const { data: telemetryData, isLoading: telemetryLoading } =
-    useDeviceTelemetry(deviceId, timeRange);
-  const { data: locationData, isLoading: locationLoading } =
-    useDeviceLocationHistory(deviceId, timeRange);
-
-  const chartData = telemetryData?.data ?? [];
-  const locations = locationData?.data ?? [];
+  const telemetryLoading = false;
+  const locationLoading = false;
+  const chartData = demoTelemetryData;
+  const locations = demoLocationHistory;
 
   const formatTime = (time: string) => {
     const d = new Date(time);

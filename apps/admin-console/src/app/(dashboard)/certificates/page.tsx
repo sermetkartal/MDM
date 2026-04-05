@@ -128,7 +128,7 @@ export default function CertificatesPage() {
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
-              // No-op in demo mode
+              if (confirm("Revoke this certificate?")) alert("Certificate revoked (demo mode)");
             }}
           >
             <XCircle className="mr-1 h-4 w-4" />

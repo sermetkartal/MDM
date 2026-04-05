@@ -54,7 +54,7 @@ export default function KioskPage() {
         title="Kiosk Profiles"
         description="Manage single-app and multi-app kiosk configurations"
         actions={
-          <Button>
+          <Button onClick={() => alert("Create Kiosk Profile (demo mode)")}>
             <Plus className="mr-2 h-4 w-4" />
             Create Profile
           </Button>

@@ -1,22 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { Link2, Copy, RefreshCw, CheckCircle, AlertCircle, Key, Webhook, MessageSquare, Hash, Trash2, Plus } from "lucide-react";
+import { Link2, Copy, CheckCircle, AlertCircle, Key, Webhook, MessageSquare, Hash, Trash2, Plus } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { api } from "@/lib/api-client";
-import { useAuthStore } from "@/stores/auth.store";
-
-interface SlackConfig {
-  id: string;
-  team_name: string;
-  channel_routing: Record<string, string>;
-  installed_at: string;
-}
 
 interface TeamsConfig {
   id: string;
@@ -25,14 +16,18 @@ interface TeamsConfig {
 }
 
 export default function IntegrationsPage() {
-  const orgId = useAuthStore((s) => s.currentOrg?.id);
   const [scimToken, setScimToken] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [slackConfig, setSlackConfig] = useState<SlackConfig | null>(null);
-  const [teamsIntegrations, setTeamsIntegrations] = useState<TeamsConfig[]>([]);
+  const [slackConnected, setSlackConnected] = useState(true);
+  const [teamsIntegrations, setTeamsIntegrations] = useState<TeamsConfig[]>([
+    { id: "tw1", name: "MDM Alerts", webhook_url: "https://teams.webhook.office.com/..." },
+  ]);
   const [newTeamsName, setNewTeamsName] = useState("");
   const [newTeamsUrl, setNewTeamsUrl] = useState("");
+
+  const slackWorkspace = "MDM Workspace";
+  const slackChannels = ["#device-alerts", "#compliance"];
 
   const scimEndpoint = `${
     typeof window !== "undefined"
@@ -40,85 +35,43 @@ export default function IntegrationsPage() {
       : "http://localhost:3001"
   }/api/v1/scim/v2`;
 
-  useEffect(() => {
-    if (orgId) {
-      loadSlackConfig();
-      loadTeamsIntegrations();
-    }
-  }, [orgId]);
+  const scimLastSync = new Date(Date.now() - 7200000).toISOString();
 
-  async function loadSlackConfig() {
-    try {
-      const res = await api.get<SlackConfig | null>(`/v1/integrations/slack/config?org_id=${orgId}`);
-      setSlackConfig(res);
-    } catch {
-      // Not connected
+  function connectSlack() {
+    setSlackConnected(true);
+    alert("Slack workspace connected (demo mode)");
+  }
+
+  function disconnectSlack() {
+    if (confirm("Disconnect Slack workspace?")) {
+      setSlackConnected(false);
     }
   }
 
-  async function loadTeamsIntegrations() {
-    try {
-      const res = await api.get<{ integrations: TeamsConfig[] }>(`/v1/integrations/teams?org_id=${orgId}`);
-      setTeamsIntegrations(res.integrations);
-    } catch {
-      // No integrations
-    }
-  }
-
-  async function connectSlack() {
-    try {
-      const res = await api.post<{ url: string }>("/v1/integrations/slack/install", { org_id: orgId });
-      window.location.href = res.url;
-    } catch {
-      // Handle error
-    }
-  }
-
-  async function disconnectSlack() {
-    try {
-      await api.delete(`/v1/integrations/slack?org_id=${orgId}`);
-      setSlackConfig(null);
-    } catch {
-      // Handle error
-    }
-  }
-
-  async function addTeamsIntegration() {
+  function addTeamsIntegration() {
     if (!newTeamsName || !newTeamsUrl) return;
-    try {
-      await api.post("/v1/integrations/teams", {
-        org_id: orgId,
-        name: newTeamsName,
-        webhook_url: newTeamsUrl,
-      });
-      setNewTeamsName("");
-      setNewTeamsUrl("");
-      await loadTeamsIntegrations();
-    } catch {
-      // Handle error
+    setTeamsIntegrations((prev) => [
+      ...prev,
+      { id: `tw-${Date.now()}`, name: newTeamsName, webhook_url: newTeamsUrl },
+    ]);
+    setNewTeamsName("");
+    setNewTeamsUrl("");
+    alert("Teams webhook added (demo mode)");
+  }
+
+  function deleteTeamsIntegration(id: string) {
+    if (confirm("Remove this Teams integration?")) {
+      setTeamsIntegrations((prev) => prev.filter((t) => t.id !== id));
     }
   }
 
-  async function deleteTeamsIntegration(id: string) {
-    try {
-      await api.delete(`/v1/integrations/teams/${id}`);
-      setTeamsIntegrations(teamsIntegrations.filter((t) => t.id !== id));
-    } catch {
-      // Handle error
-    }
-  }
-
-  async function generateScimToken() {
+  function generateScimToken() {
     setGenerating(true);
-    try {
-      const res = await api.post<{ data: { token: string } }>("/v1/integrations/scim/token");
-      setScimToken(res.data.token);
-    } catch {
+    setTimeout(() => {
       const placeholder = `scim_${crypto.randomUUID().replace(/-/g, "")}`;
       setScimToken(placeholder);
-    } finally {
       setGenerating(false);
-    }
+    }, 500);
   }
 
   function copyToClipboard(text: string) {
@@ -174,15 +127,12 @@ export default function IntegrationsPage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {slackConfig ? (
+          {slackConnected ? (
             <>
               <div className="flex items-center gap-2">
                 <Badge variant="default">Connected</Badge>
                 <span className="text-sm text-muted-foreground">
-                  Workspace: {slackConfig.team_name}
-                </span>
-                <span className="text-xs text-muted-foreground ml-auto">
-                  Installed {new Date(slackConfig.installed_at).toLocaleDateString()}
+                  Workspace: {slackWorkspace}
                 </span>
               </div>
               <div>
@@ -191,17 +141,13 @@ export default function IntegrationsPage() {
                   Configure which Slack channel receives each event type
                 </p>
                 <div className="space-y-2 text-sm">
-                  {Object.entries(slackConfig.channel_routing).length === 0 ? (
-                    <p className="text-xs text-muted-foreground">No channel routing configured yet</p>
-                  ) : (
-                    Object.entries(slackConfig.channel_routing).map(([event, channel]) => (
-                      <div key={event} className="flex items-center gap-2">
-                        <Badge variant="outline" className="font-mono text-xs">{event}</Badge>
-                        <span className="text-muted-foreground">-&gt;</span>
-                        <span className="font-mono text-xs">{channel}</span>
-                      </div>
-                    ))
-                  )}
+                  {slackChannels.map((channel) => (
+                    <div key={channel} className="flex items-center gap-2">
+                      <Badge variant="outline" className="font-mono text-xs">device.alert</Badge>
+                      <span className="text-muted-foreground">-&gt;</span>
+                      <span className="font-mono text-xs">{channel}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
               <Button variant="destructive" size="sm" onClick={disconnectSlack}>
@@ -435,15 +381,15 @@ export default function IntegrationsPage() {
         <CardContent>
           <div className="grid grid-cols-3 gap-4 text-center">
             <div className="rounded-md border p-4">
-              <p className="text-2xl font-bold">--</p>
+              <p className="text-2xl font-bold">24</p>
               <p className="text-sm text-muted-foreground">Users Provisioned</p>
             </div>
             <div className="rounded-md border p-4">
-              <p className="text-2xl font-bold">--</p>
+              <p className="text-2xl font-bold">5</p>
               <p className="text-sm text-muted-foreground">Groups Synced</p>
             </div>
             <div className="rounded-md border p-4">
-              <p className="text-2xl font-bold">--</p>
+              <p className="text-2xl font-bold">{new Date(scimLastSync).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
               <p className="text-sm text-muted-foreground">Last Sync</p>
             </div>
           </div>

@@ -3,29 +3,15 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import dynamic from "next/dynamic";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useCreateGeofence } from "@/hooks/mutations/use-geofence";
-import type { GeofencePoint, CreateGeofenceRequest, GeofenceType } from "@/lib/types";
-
-const GeofenceMap = dynamic(
-  () => import("@/components/geofencing/GeofenceMap").then((m) => m.GeofenceMap),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex h-[400px] items-center justify-center rounded-lg border bg-muted/50">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    ),
-  },
-);
+import type { GeofencePoint, GeofenceType } from "@/lib/types";
 
 export default function NewGeofencePage() {
   const router = useRouter();
-  const createGeofence = useCreateGeofence();
+  const [saving, setSaving] = React.useState(false);
 
   const [name, setName] = React.useState("");
   const [description, setDescription] = React.useState("");
@@ -45,29 +31,13 @@ export default function NewGeofencePage() {
     }
   }
 
-  async function handleSave() {
-    let req: CreateGeofenceRequest;
-    if (type === "circle") {
-      req = {
-        type: "circle",
-        name,
-        description: description || undefined,
-        center_lat: centerLat,
-        center_lng: centerLng,
-        radius_meters: radius,
-        dwell_time_seconds: dwellMinutes * 60,
-      };
-    } else {
-      req = {
-        type: "polygon",
-        name,
-        description: description || undefined,
-        points,
-        dwell_time_seconds: dwellMinutes * 60,
-      };
-    }
-    await createGeofence.mutateAsync(req);
-    router.push("/geofencing");
+  function handleSave() {
+    setSaving(true);
+    setTimeout(() => {
+      setSaving(false);
+      alert("Geofence created (demo mode)");
+      router.push("/geofencing");
+    }, 500);
   }
 
   const canSave = name.trim().length > 0 && (type === "circle" || points.length >= 3);
@@ -95,18 +65,8 @@ export default function NewGeofencePage() {
         <div className="lg:col-span-2">
           <Card>
             <CardContent className="p-0">
-              <div className="h-[500px]">
-                <GeofenceMap
-                  geofences={[]}
-                  center={[centerLat, centerLng]}
-                  zoom={13}
-                  editable
-                  editType={type}
-                  editCenter={type === "circle" ? [centerLat, centerLng] : undefined}
-                  editRadius={type === "circle" ? radius : undefined}
-                  editPoints={type === "polygon" ? points : undefined}
-                  onMapClick={handleMapClick}
-                />
+              <div className="h-[500px] bg-muted rounded-lg flex items-center justify-center text-muted-foreground cursor-pointer" onClick={() => handleMapClick(centerLat + (Math.random() - 0.5) * 0.01, centerLng + (Math.random() - 0.5) * 0.01)}>
+                Click on the map to place geofence (Map requires Leaflet - demo mode)
               </div>
             </CardContent>
           </Card>
@@ -264,8 +224,8 @@ export default function NewGeofencePage() {
           </Card>
 
           <div className="flex gap-2">
-            <Button onClick={handleSave} disabled={!canSave || createGeofence.isPending} className="flex-1">
-              {createGeofence.isPending ? "Creating..." : "Create Geofence"}
+            <Button onClick={handleSave} disabled={!canSave || saving} className="flex-1">
+              {saving ? "Creating..." : "Create Geofence"}
             </Button>
             <Link href="/geofencing">
               <Button variant="outline">Cancel</Button>

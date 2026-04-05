@@ -8,13 +8,11 @@ import {
   ChevronUp,
   ChevronDown,
   ChevronsUpDown,
-  Loader2,
 } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -23,7 +21,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useReportData, useReportJob } from "@/hooks/queries/use-reports";
 import { formatDate } from "@/lib/utils";
 import type { ReportFormat } from "@/lib/types";
 
@@ -31,9 +28,29 @@ export default function ReportViewerPage() {
   const { reportId } = useParams<{ reportId: string }>();
   const router = useRouter();
 
-  const { data: jobStatus, isLoading: jobLoading } = useReportJob(reportId);
-  const { data: reportData, isLoading: dataLoading } =
-    useReportData(reportId);
+  const reportData = {
+    id: reportId,
+    title: "Device Inventory Report",
+    status: "completed",
+    generated_at: new Date().toISOString(),
+    format: "pdf",
+    summary: { total_devices: 45, online: 38, compliant: 41 } as Record<string, string | number>,
+    columns: [
+      { key: "serial", label: "Serial", type: "string" },
+      { key: "model", label: "Model", type: "string" },
+      { key: "os", label: "OS", type: "string" },
+      { key: "status", label: "Status", type: "string" },
+      { key: "compliance", label: "Compliance", type: "string" },
+    ],
+    rows: [
+      ["WH-001", "Galaxy Tab A8", "Android 14", "Online", "Compliant"],
+      ["RT-POS-01", "Pixel Tablet", "Android 14", "Online", "Non-Compliant"],
+      ["FLD-007", "Galaxy A54", "Android 13", "Offline", "Compliant"],
+      ["WH-002", "Galaxy Tab A8", "Android 14", "Online", "Compliant"],
+      ["FLD-012", "Pixel 7a", "Android 14", "Online", "Compliant"],
+    ] as (string | number | boolean | null)[][],
+  };
+  const isLoading = false;
 
   const [sortCol, setSortCol] = React.useState<number | null>(null);
   const [sortDir, setSortDir] = React.useState<"asc" | "desc">("asc");
@@ -63,31 +80,8 @@ export default function ReportViewerPage() {
   }, [reportData?.rows, sortCol, sortDir]);
 
   const handleDownload = (format: ReportFormat) => {
-    window.open(`/api/v1/reports/${reportId}/download?format=${format}`, "_blank");
+    alert(`Downloading report as ${format.toUpperCase()} (demo mode)`);
   };
-
-  const isLoading = jobLoading || dataLoading;
-
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
-  }
-
-  if (jobStatus?.status === "processing" || jobStatus?.status === "queued") {
-    return (
-      <div className="flex flex-col items-center justify-center gap-4 py-24">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="text-lg font-medium">Report is still generating...</p>
-        <p className="text-sm text-muted-foreground">
-          {jobStatus.progress_percent}% complete
-        </p>
-      </div>
-    );
-  }
 
   const summaryEntries = reportData?.summary
     ? Object.entries(reportData.summary).filter(
@@ -191,7 +185,6 @@ export default function ReportViewerPage() {
                           display = cell ? "Yes" : "No";
                         }
 
-                        // Compliance status coloring
                         const isCompliance =
                           col?.key?.includes("compliance") ||
                           col?.label?.toLowerCase().includes("compliance");
@@ -204,7 +197,7 @@ export default function ReportViewerPage() {
                                 variant={
                                   cellStr === "COMPLIANT"
                                     ? "default"
-                                    : cellStr === "NON_COMPLIANT"
+                                    : cellStr === "NON-COMPLIANT"
                                       ? "destructive"
                                       : "secondary"
                                 }

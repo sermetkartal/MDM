@@ -7,17 +7,24 @@ import { ArrowLeft, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RemoteViewer } from "@/components/devices/RemoteViewer";
-import { useDevice } from "@/hooks/queries/use-devices";
 import { DeviceStatusBadge } from "@/components/devices/DeviceStatusBadge";
 
-// These would come from auth context in production
 const MOCK_ORG_ID = "00000000-0000-0000-0000-000000000001";
 const MOCK_USER_ID = "00000000-0000-0000-0000-000000000002";
 
 export default function RemoteViewPage() {
   const params = useParams();
   const deviceId = params.deviceId as string;
-  const { data: device, isLoading } = useDevice(deviceId);
+  const device = {
+    id: deviceId,
+    name: `Device ${deviceId.slice(0, 6)}`,
+    serialNumber: "SN-DEMO-001",
+    udid: deviceId,
+    manufacturer: "Samsung",
+    model: "Galaxy Tab A8",
+    status: "online" as const,
+  };
+  const isLoading = false;
 
   const handleDisconnect = React.useCallback(() => {
     console.log("Remote session disconnected for device:", deviceId);

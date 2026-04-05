@@ -7,7 +7,6 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -22,18 +21,28 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  useReportSchedules,
-  useReportTemplates,
-} from "@/hooks/queries/use-reports";
-import {
-  useCreateSchedule,
-  useDeleteSchedule,
-  useRunScheduleNow,
-  useUpdateSchedule,
-} from "@/hooks/mutations/use-generate-report";
 import { formatDate } from "@/lib/utils";
-import type { ReportFormat, ReportSchedule } from "@/lib/types";
+import type { ReportFormat } from "@/lib/types";
+
+interface ReportSchedule {
+  id: string;
+  name: string;
+  template_id: string;
+  template_name: string;
+  format: ReportFormat;
+  cron_expression: string;
+  cron_human: string;
+  recipients: string[];
+  is_active: boolean;
+  last_run_at: string | null;
+}
+
+const DEMO_TEMPLATES = [
+  { id: "t1", name: "Device Inventory" },
+  { id: "t2", name: "Compliance Summary" },
+  { id: "t3", name: "Security Incidents" },
+  { id: "t4", name: "App Distribution" },
+];
 
 const CRON_PRESETS = [
   { label: "Daily at 8:00 AM", value: "0 8 * * *" },
@@ -47,25 +56,42 @@ export default function ScheduledReportsPage() {
   const preselectedTemplate = searchParams.get("template") ?? "";
 
   const [dialogOpen, setDialogOpen] = React.useState(shouldCreate);
-  const [editingSchedule, setEditingSchedule] =
-    React.useState<ReportSchedule | null>(null);
+  const [editingSchedule, setEditingSchedule] = React.useState<ReportSchedule | null>(null);
 
-  // Form state
   const [name, setName] = React.useState("");
   const [templateId, setTemplateId] = React.useState(preselectedTemplate);
   const [format, setFormat] = React.useState<ReportFormat>("pdf");
   const [cronExpression, setCronExpression] = React.useState("0 8 * * *");
   const [recipients, setRecipients] = React.useState("");
 
-  const { data: scheduleData, isLoading } = useReportSchedules();
-  const { data: templateData } = useReportTemplates();
-  const schedules = scheduleData?.schedules ?? [];
-  const templates = templateData?.templates ?? [];
+  const [schedules, setSchedules] = React.useState<ReportSchedule[]>([
+    {
+      id: "s1",
+      name: "Weekly Compliance Report",
+      template_id: "t2",
+      template_name: "Compliance Summary",
+      format: "pdf",
+      cron_expression: "0 8 * * 1",
+      cron_human: "Weekly on Monday at 8:00 AM",
+      recipients: ["admin@example.com"],
+      is_active: true,
+      last_run_at: new Date(Date.now() - 604800000).toISOString(),
+    },
+    {
+      id: "s2",
+      name: "Daily Device Inventory",
+      template_id: "t1",
+      template_name: "Device Inventory",
+      format: "csv",
+      cron_expression: "0 8 * * *",
+      cron_human: "Daily at 8:00 AM",
+      recipients: ["it-ops@example.com"],
+      is_active: true,
+      last_run_at: new Date(Date.now() - 86400000).toISOString(),
+    },
+  ]);
 
-  const createSchedule = useCreateSchedule();
-  const updateSchedule = useUpdateSchedule(editingSchedule?.id ?? "");
-  const deleteSchedule = useDeleteSchedule();
-  const runNow = useRunScheduleNow();
+  const templates = DEMO_TEMPLATES;
 
   const resetForm = () => {
     setName("");
@@ -87,11 +113,7 @@ export default function ScheduledReportsPage() {
     setTemplateId(schedule.template_id);
     setFormat(schedule.format);
     setCronExpression(schedule.cron_expression);
-    setRecipients(
-      Array.isArray(schedule.recipients)
-        ? schedule.recipients.join(", ")
-        : "",
-    );
+    setRecipients(schedule.recipients.join(", "));
     setDialogOpen(true);
   };
 
@@ -100,40 +122,47 @@ export default function ScheduledReportsPage() {
       .split(",")
       .map((r) => r.trim())
       .filter(Boolean);
+    const cronHuman = CRON_PRESETS.find(p => p.value === cronExpression)?.label ?? cronExpression;
+    const templateName = templates.find(t => t.id === templateId)?.name ?? templateId;
 
     if (editingSchedule) {
-      updateSchedule.mutate(
-        {
-          name,
-          template_id: templateId,
-          format,
-          cron_expression: cronExpression,
-          recipients: recipientList,
-        },
-        {
-          onSuccess: () => {
-            setDialogOpen(false);
-            resetForm();
-          },
-        },
-      );
+      setSchedules(prev => prev.map(s => s.id === editingSchedule.id ? {
+        ...s,
+        name,
+        template_id: templateId,
+        template_name: templateName,
+        format,
+        cron_expression: cronExpression,
+        cron_human: cronHuman,
+        recipients: recipientList,
+      } : s));
+      alert("Schedule updated (demo mode)");
     } else {
-      createSchedule.mutate(
-        {
-          org_id: "00000000-0000-0000-0000-000000000001",
-          name,
-          template_id: templateId,
-          format,
-          cron_expression: cronExpression,
-          recipients: recipientList,
-        },
-        {
-          onSuccess: () => {
-            setDialogOpen(false);
-            resetForm();
-          },
-        },
-      );
+      setSchedules(prev => [...prev, {
+        id: `s-${Date.now()}`,
+        name,
+        template_id: templateId,
+        template_name: templateName,
+        format,
+        cron_expression: cronExpression,
+        cron_human: cronHuman,
+        recipients: recipientList,
+        is_active: true,
+        last_run_at: null,
+      }]);
+      alert("Schedule created (demo mode)");
+    }
+    setDialogOpen(false);
+    resetForm();
+  };
+
+  const handleRunNow = (id: string) => {
+    alert("Report generation triggered (demo mode)");
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm("Delete this scheduled report?")) {
+      setSchedules(prev => prev.filter(s => s.id !== id));
     }
   };
 
@@ -165,17 +194,7 @@ export default function ScheduledReportsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? (
-              Array.from({ length: 3 }).map((_, i) => (
-                <TableRow key={i}>
-                  {Array.from({ length: 8 }).map((_, j) => (
-                    <TableCell key={j}>
-                      <Skeleton className="h-5 w-full" />
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : schedules.length === 0 ? (
+            {schedules.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={8}
@@ -185,75 +204,68 @@ export default function ScheduledReportsPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              schedules.map((schedule) => {
-                const template = templates.find(
-                  (t) => t.id === schedule.template_id,
-                );
-                return (
-                  <TableRow key={schedule.id}>
-                    <TableCell className="font-medium">
-                      {schedule.name}
-                    </TableCell>
-                    <TableCell>{template?.name ?? schedule.template_id}</TableCell>
-                    <TableCell className="text-sm">
-                      {schedule.cron_human ?? schedule.cron_expression}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">
-                        {schedule.format.toUpperCase()}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="max-w-[200px] truncate text-sm">
-                      {Array.isArray(schedule.recipients)
-                        ? schedule.recipients.join(", ")
-                        : ""}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {schedule.last_run_at
-                        ? formatDate(schedule.last_run_at)
-                        : "Never"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={schedule.is_active ? "default" : "secondary"}
+              schedules.map((schedule) => (
+                <TableRow key={schedule.id}>
+                  <TableCell className="font-medium">
+                    {schedule.name}
+                  </TableCell>
+                  <TableCell>{schedule.template_name}</TableCell>
+                  <TableCell className="text-sm">
+                    {schedule.cron_human}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">
+                      {schedule.format.toUpperCase()}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="max-w-[200px] truncate text-sm">
+                    {schedule.recipients.join(", ")}
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {schedule.last_run_at
+                      ? formatDate(schedule.last_run_at)
+                      : "Never"}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={schedule.is_active ? "default" : "secondary"}
+                    >
+                      {schedule.is_active ? "Active" : "Disabled"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        title="Run Now"
+                        onClick={() => handleRunNow(schedule.id)}
                       >
-                        {schedule.is_active ? "Active" : "Disabled"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          title="Run Now"
-                          onClick={() => runNow.mutate(schedule.id)}
-                        >
-                          <Play className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          title="Edit"
-                          onClick={() => openEditDialog(schedule)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-red-500"
-                          title="Delete"
-                          onClick={() => deleteSchedule.mutate(schedule.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
+                        <Play className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        title="Edit"
+                        onClick={() => openEditDialog(schedule)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-red-500"
+                        title="Delete"
+                        onClick={() => handleDelete(schedule.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
             )}
           </TableBody>
         </Table>
@@ -347,9 +359,7 @@ export default function ScheduledReportsPage() {
               </Button>
               <Button
                 onClick={handleSubmit}
-                disabled={
-                  !name || !templateId || !recipients || createSchedule.isPending
-                }
+                disabled={!name || !templateId || !recipients}
               >
                 {editingSchedule ? "Update" : "Create Schedule"}
               </Button>
@@ -360,4 +370,3 @@ export default function ScheduledReportsPage() {
     </div>
   );
 }
-

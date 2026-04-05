@@ -1,14 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Shield, Download, Upload, CheckCircle, AlertCircle } from "lucide-react";
+import { Download, Upload, CheckCircle, AlertCircle } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { api } from "@/lib/api-client";
 
 interface SamlFormData {
   entityId: string;
@@ -48,61 +46,34 @@ export default function SsoPage() {
   const [samlStatus, setSamlStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [oidcStatus, setOidcStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
-  async function handleSaveSaml() {
+  function handleSaveSaml() {
     setSamlStatus("saving");
-    try {
-      await api.patch("/v1/organizations/settings", {
-        saml: {
-          entityId: saml.entityId,
-          ssoLoginUrl: saml.ssoLoginUrl,
-          ssoLogoutUrl: saml.ssoLogoutUrl,
-          certificate: saml.certificate,
-          attributeMapping: {
-            email: saml.emailAttribute,
-            firstName: saml.firstNameAttribute,
-            lastName: saml.lastNameAttribute,
-          },
-        },
-      });
+    setTimeout(() => {
       setSamlStatus("saved");
-    } catch {
-      setSamlStatus("error");
-    }
+    }, 500);
   }
 
-  async function handleSaveOidc() {
+  function handleSaveOidc() {
     setOidcStatus("saving");
-    try {
-      await api.patch("/v1/organizations/settings", {
-        oidc: {
-          provider: oidc.provider,
-          issuerUrl: oidc.issuerUrl,
-          clientId: oidc.clientId,
-          clientSecret: oidc.clientSecret,
-        },
-      });
+    setTimeout(() => {
       setOidcStatus("saved");
-    } catch {
-      setOidcStatus("error");
-    }
+    }, 500);
   }
 
-  async function downloadSpMetadata() {
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api"}/v1/auth/saml/metadata`
-      );
-      const xml = await response.text();
-      const blob = new Blob([xml], { type: "application/xml" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "sp-metadata.xml";
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      // handle error
-    }
+  function downloadSpMetadata() {
+    const demoXml = `<?xml version="1.0"?>
+<EntityDescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata" entityID="https://mdm.example.com/saml/metadata">
+  <SPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+    <AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://mdm.example.com/api/v1/auth/saml/callback" />
+  </SPSSODescriptor>
+</EntityDescriptor>`;
+    const blob = new Blob([demoXml], { type: "application/xml" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "sp-metadata.xml";
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   function handleIdpMetadataUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -112,7 +83,6 @@ export default function SsoPage() {
     const reader = new FileReader();
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
-      // Parse basic IdP metadata fields
       const entityIdMatch = text.match(/entityID="([^"]+)"/);
       const ssoMatch = text.match(/Location="([^"]+)"[^>]*Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"/);
       const certMatch = text.match(/<ds:X509Certificate>([^<]+)<\/ds:X509Certificate>/);
@@ -123,6 +93,7 @@ export default function SsoPage() {
         ssoLoginUrl: ssoMatch?.[1] ?? prev.ssoLoginUrl,
         certificate: certMatch?.[1]?.replace(/\s/g, "") ?? prev.certificate,
       }));
+      alert("IdP metadata imported (demo mode)");
     };
     reader.readAsText(file);
   }
@@ -267,7 +238,7 @@ export default function SsoPage() {
               </Button>
               {samlStatus === "saved" && (
                 <span className="flex items-center gap-1 text-sm text-green-600">
-                  <CheckCircle className="h-4 w-4" /> Saved
+                  <CheckCircle className="h-4 w-4" /> Saved (demo mode)
                 </span>
               )}
               {samlStatus === "error" && (
@@ -357,7 +328,7 @@ export default function SsoPage() {
               </Button>
               {oidcStatus === "saved" && (
                 <span className="flex items-center gap-1 text-sm text-green-600">
-                  <CheckCircle className="h-4 w-4" /> Saved
+                  <CheckCircle className="h-4 w-4" /> Saved (demo mode)
                 </span>
               )}
               {oidcStatus === "error" && (

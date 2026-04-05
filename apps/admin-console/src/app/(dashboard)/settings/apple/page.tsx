@@ -228,7 +228,7 @@ export default function AppleSettingsPage() {
                 accept=".pem,.key"
                 className="max-w-sm"
               />
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => alert("Upload successful (demo mode)")}>
                 <Upload className="mr-2 h-4 w-4" />
                 Upload
               </Button>

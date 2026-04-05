@@ -19,13 +19,14 @@ import type { GroupTreeNode } from "@/lib/types";
 export default function GroupsPage() {
   const router = useRouter();
 
-  const tree: GroupTreeNode[] = [
+  const [groups, setGroups] = React.useState<GroupTreeNode[]>([
     { id: "g1", name: "All Devices", description: null, type: "static", memberCount: 45, parentId: null, depth: 0, children: [
       { id: "g2", name: "Warehouse", description: null, type: "static", memberCount: 20, parentId: "g1", depth: 1, children: [] },
       { id: "g3", name: "Retail POS", description: null, type: "dynamic", memberCount: 15, parentId: "g1", depth: 1, children: [] },
       { id: "g4", name: "Field Workers", description: null, type: "static", memberCount: 10, parentId: "g1", depth: 1, children: [] },
     ]},
-  ];
+  ]);
+  const tree = groups;
   const isLoading = false;
 
   const [selectedGroup, setSelectedGroup] = React.useState<GroupTreeNode | null>(null);
@@ -35,11 +36,19 @@ export default function GroupsPage() {
   };
 
   const handleDrop = (draggedId: string, targetId: string) => {
-    // No-op in demo mode
+    alert(`Moved group ${draggedId} to ${targetId} (demo mode)`);
   };
 
   const handleDelete = (groupId: string) => {
-    // No-op in demo mode
+    if (confirm("Are you sure you want to delete this group?")) {
+      const removeFromTree = (nodes: GroupTreeNode[]): GroupTreeNode[] =>
+        nodes.filter(g => g.id !== groupId).map(g => ({
+          ...g,
+          children: g.children ? removeFromTree(g.children) : [],
+        }));
+      setGroups(prev => removeFromTree(prev));
+      if (selectedGroup?.id === groupId) setSelectedGroup(null);
+    }
   };
 
   const typeBadge = (type: string) => {
