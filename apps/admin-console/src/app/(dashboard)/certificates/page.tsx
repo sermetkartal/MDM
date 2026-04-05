@@ -14,12 +14,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  useCertificates,
-  useRevokeCertificate,
-  useUploadCACert,
-  useSCEPConfig,
-} from "@/hooks/queries/use-certificates";
 import type { Certificate, ExpiryStatus, ListCertificatesParams } from "@/lib/types";
 
 const expiryBadge: Record<ExpiryStatus, { variant: "default" | "destructive" | "warning" | "secondary"; label: string }> = {
@@ -60,12 +54,16 @@ export default function CertificatesPage() {
   const [caName, setCaName] = useState("");
   const [caPem, setCaPem] = useState("");
 
-  const { data, isLoading } = useCertificates(params);
-  const revokeMutation = useRevokeCertificate();
-  const uploadMutation = useUploadCACert();
-  const { data: scepConfig } = useSCEPConfig();
-
-  const certificates = data?.data ?? [];
+  const isLoading = false;
+  const certificates: Certificate[] = [
+    { id: "c1", orgId: "org1", deviceId: "d1", name: "WH-001 Cert", type: "device", thumbprint: null, serialNumber: "A1B2C3D4", issuer: "MDM Root CA", subject: "CN=WH-001,O=MDM Admin", notBefore: "2024-06-15T00:00:00Z", notAfter: "2025-06-15T00:00:00Z", status: "active", expiryStatus: "active", fileUrl: null, createdAt: "2024-06-15T00:00:00Z" },
+    { id: "c2", orgId: "org1", deviceId: null, name: "MDM Root CA", type: "ca", thumbprint: null, serialNumber: "ROOT001", issuer: "Self-signed", subject: "CN=MDM Root CA", notBefore: "2024-01-01T00:00:00Z", notAfter: "2034-01-01T00:00:00Z", status: "active", expiryStatus: "active", fileUrl: null, createdAt: "2024-01-01T00:00:00Z" },
+    { id: "c3", orgId: "org1", deviceId: "d2", name: "RT-POS-01 Cert", type: "device", thumbprint: null, serialNumber: "E5F6G7H8", issuer: "MDM Root CA", subject: "CN=RT-POS-01,O=MDM Admin", notBefore: "2024-07-01T00:00:00Z", notAfter: "2025-07-01T00:00:00Z", status: "active", expiryStatus: "active", fileUrl: null, createdAt: "2024-07-01T00:00:00Z" },
+    { id: "c4", orgId: "org1", deviceId: "d3", name: "FLD-007 Cert", type: "device", thumbprint: null, serialNumber: "I9J0K1L2", issuer: "MDM Root CA", subject: "CN=FLD-007,O=MDM Admin", notBefore: "2024-03-01T00:00:00Z", notAfter: "2024-09-01T00:00:00Z", status: "expired", expiryStatus: "expired", fileUrl: null, createdAt: "2024-03-01T00:00:00Z" },
+    { id: "c5", orgId: "org1", deviceId: null, name: "SCEP Signing", type: "ca", thumbprint: null, serialNumber: "SCEP001", issuer: "MDM Root CA", subject: "CN=SCEP Signing", notBefore: "2024-01-15T00:00:00Z", notAfter: "2026-01-15T00:00:00Z", status: "active", expiryStatus: "active", fileUrl: null, createdAt: "2024-01-15T00:00:00Z" },
+  ];
+  const filteredCertificates = params.type ? certificates.filter(c => c.type === params.type) : certificates;
+  const scepConfig = { scepUrl: "https://mdm.example.com/scep", challengePassword: "demo-challenge", capabilities: ["SHA-256"] };
 
   const columns: Column<Certificate & { expiryStatus?: ExpiryStatus; [key: string]: unknown }>[] = [
     {
@@ -130,9 +128,7 @@ export default function CertificatesPage() {
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
-              if (confirm("Revoke this certificate? This action cannot be undone.")) {
-                revokeMutation.mutate(row.id);
-              }
+              // No-op in demo mode
             }}
           >
             <XCircle className="mr-1 h-4 w-4" />
@@ -144,16 +140,10 @@ export default function CertificatesPage() {
 
   const handleUploadCA = () => {
     if (!caName || !caPem) return;
-    uploadMutation.mutate(
-      { name: caName, certPem: caPem },
-      {
-        onSuccess: () => {
-          setUploadOpen(false);
-          setCaName("");
-          setCaPem("");
-        },
-      },
-    );
+    // No-op in demo mode
+    setUploadOpen(false);
+    setCaName("");
+    setCaPem("");
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -256,7 +246,7 @@ export default function CertificatesPage() {
 
       <DataTable
         columns={columns}
-        data={certificates as (Certificate & { [key: string]: unknown })[]}
+        data={filteredCertificates as (Certificate & { [key: string]: unknown })[]}
         searchKey="subject"
         searchPlaceholder="Search by subject..."
       />

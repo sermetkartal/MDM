@@ -32,7 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useDevice, useDevicePolicies, useDeviceApps, useDeviceCompliance } from "@/hooks/queries/use-devices";
+// import { useDevice, useDevicePolicies, useDeviceApps, useDeviceCompliance } from "@/hooks/queries/use-devices";
 import { formatDate, formatRelativeTime } from "@/lib/utils";
 
 function CircularProgress({ value, label, color }: { value: number; label: string; color: string }) {
@@ -78,15 +78,34 @@ export default function DeviceDetailPage() {
 
   const [activeTab, setActiveTab] = React.useState("overview");
 
-  const { data: device, isLoading } = useDevice(deviceId);
-  const { data: policiesData } = useDevicePolicies(deviceId, { enabled: activeTab === "policies" });
-  const { data: appsData } = useDeviceApps(deviceId, { enabled: activeTab === "apps" });
-  const { data: complianceData } = useDeviceCompliance(deviceId, { enabled: activeTab === "overview" });
+  // Dummy data replacing API hooks
+  const device = {
+    id: deviceId, serialNumber: "WH-001", udid: "abc-123-def", name: "WH-001",
+    model: "Galaxy Tab A8", manufacturer: "Samsung",
+    osVersion: "Android 14", platform: "android",
+    status: "enrolled", complianceStatus: "compliant",
+    lastSeenAt: new Date().toISOString(),
+    enrolledAt: "2024-06-15T10:30:00Z",
+    createdAt: "2024-06-15T10:30:00Z",
+    deviceInfo: {
+      batteryLevel: 78, storageUsedPercent: 36, memoryUsedPercent: 56,
+      encrypted: true, rooted: false, screenLock: true,
+      latitude: 41.0082, longitude: 28.9784,
+    },
+  };
+  const isLoading = false;
 
-  const policies = policiesData?.data ?? [];
-  const apps = appsData?.data ?? [];
+  const policies = [
+    { assignmentId: "pa1", policyName: "WiFi Restriction", platform: "android", version: 3, assignedAt: "2024-07-01T00:00:00Z" },
+    { assignmentId: "pa2", policyName: "Passcode Policy", platform: "android", version: 2, assignedAt: "2024-07-05T00:00:00Z" },
+  ];
+  const apps = [
+    { assignmentId: "aa1", appName: "MDM Agent", bundleId: "com.mdm.agent", isRequired: true, assignedAt: "2024-06-15T00:00:00Z" },
+    { assignmentId: "aa2", appName: "Chrome", bundleId: "com.chrome.browser", isRequired: false, assignedAt: "2024-06-20T00:00:00Z" },
+    { assignmentId: "aa3", appName: "Settings", bundleId: "com.android.settings", isRequired: true, assignedAt: "2024-06-15T00:00:00Z" },
+  ];
 
-  const deviceInfo = (device?.deviceInfo ?? {}) as Record<string, unknown>;
+  const deviceInfo = (device.deviceInfo ?? {}) as Record<string, unknown>;
   const batteryLevel = (deviceInfo.batteryLevel as number) ?? 0;
   const storageUsed = (deviceInfo.storageUsedPercent as number) ?? 0;
   const memoryUsed = (deviceInfo.memoryUsedPercent as number) ?? 0;

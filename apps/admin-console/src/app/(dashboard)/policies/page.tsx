@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Shield, MoreHorizontal } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+// import { useQuery } from "@tanstack/react-query";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,21 +23,24 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PolicyAssignmentModal } from "@/components/policies/PolicyAssignmentModal";
-import { policyKeys } from "@/hooks/mutations/use-policy";
-import { api } from "@/lib/api-client";
+// import { policyKeys } from "@/hooks/mutations/use-policy";
+// import { api } from "@/lib/api-client";
 import { formatRelativeTime } from "@/lib/utils";
-import type { PaginatedResponse, Policy } from "@/lib/types";
+// import type { PaginatedResponse, Policy } from "@/lib/types";
 
 export default function PoliciesPage() {
   const router = useRouter();
   const [assignPolicyId, setAssignPolicyId] = React.useState<string | null>(null);
 
-  const { data, isLoading } = useQuery({
-    queryKey: policyKeys.lists(),
-    queryFn: () => api.get<PaginatedResponse<Policy>>("/v1/policies?limit=50"),
-  });
-
-  const policies = data?.data ?? [];
+  // Dummy data replacing useQuery
+  const policies = [
+    { id: "p1", name: "Corporate WiFi Only", payload: { type: "wifi" }, platform: "android", version: 3, isActive: true, updatedAt: "2024-06-01T00:00:00Z" },
+    { id: "p2", name: "Strong Passcode Required", payload: { type: "passcode" }, platform: "android", version: 2, isActive: true, updatedAt: "2024-06-05T00:00:00Z" },
+    { id: "p3", name: "Camera Disabled", payload: { type: "restriction" }, platform: "android", version: 1, isActive: true, updatedAt: "2024-06-10T00:00:00Z" },
+    { id: "p4", name: "Kiosk - POS Mode", payload: { type: "kiosk" }, platform: "android", version: 4, isActive: true, updatedAt: "2024-07-01T00:00:00Z" },
+    { id: "p5", name: "Always-On VPN", payload: { type: "vpn" }, platform: "android", version: 1, isActive: false, updatedAt: "2024-07-15T00:00:00Z" },
+  ];
+  const isLoading = false;
 
   return (
     <div className="space-y-6">

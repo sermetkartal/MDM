@@ -2,44 +2,19 @@
 
 import * as React from "react";
 import Link from "next/link";
-import dynamic from "next/dynamic";
-import { Plus, MapPin, Circle, Pentagon, Loader2 } from "lucide-react";
+import { Plus, MapPin, Circle, Pentagon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useGeofences } from "@/hooks/queries/use-geofences";
 import type { Geofence } from "@/lib/types";
 
-const GeofenceMap = dynamic(
-  () => import("@/components/geofencing/GeofenceMap").then((m) => m.GeofenceMap),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex h-[500px] items-center justify-center rounded-lg border bg-muted/50">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    ),
-  },
-);
-
 export default function GeofencingPage() {
-  const { data, isLoading } = useGeofences();
-  const geofences = data?.data ?? [];
-
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <Skeleton className="h-10 w-64" />
-        <Skeleton className="h-[500px]" />
-        <div className="grid gap-4 md:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-24" />
-          ))}
-        </div>
-      </div>
-    );
-  }
+  const geofences: Geofence[] = [
+    { id: "gf1", orgId: "org1", name: "Headquarters", description: null, type: "circle", centerLat: "41.0082", centerLng: "28.9784", radiusMeters: 500, polygon: null, dwellTimeSeconds: 0, isActive: true, createdAt: "2024-06-01T00:00:00Z", updatedAt: "2024-06-01T00:00:00Z" },
+    { id: "gf2", orgId: "org1", name: "Warehouse Zone", description: null, type: "polygon", centerLat: "41.01", centerLng: "28.97", radiusMeters: 0, polygon: [{ lat: 41.01, lng: 28.96 }, { lat: 41.02, lng: 28.97 }, { lat: 41.01, lng: 28.98 }], dwellTimeSeconds: 300, isActive: true, createdAt: "2024-07-01T00:00:00Z", updatedAt: "2024-07-01T00:00:00Z" },
+    { id: "gf3", orgId: "org1", name: "Restricted Area", description: null, type: "circle", centerLat: "41.015", centerLng: "28.985", radiusMeters: 200, polygon: null, dwellTimeSeconds: 0, isActive: false, createdAt: "2024-08-01T00:00:00Z", updatedAt: "2024-08-01T00:00:00Z" },
+  ];
+  const isLoading = false;
 
   return (
     <div className="space-y-6">
@@ -65,8 +40,8 @@ export default function GeofencingPage() {
           <CardTitle className="text-base">Geofence Map</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-[500px]">
-            <GeofenceMap geofences={geofences} />
+          <div className="h-[500px] bg-muted rounded-lg flex items-center justify-center text-muted-foreground">
+            Map Preview
           </div>
         </CardContent>
       </Card>

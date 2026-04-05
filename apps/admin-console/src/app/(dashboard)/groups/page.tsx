@@ -14,33 +14,32 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { GroupTree } from "@/components/groups/GroupTree";
-import { useGroupTree, useDeleteGroup, useEvaluateGroup, useUpdateGroup } from "@/hooks/queries/use-groups";
 import type { GroupTreeNode } from "@/lib/types";
 
 export default function GroupsPage() {
   const router = useRouter();
-  const { data: treeData, isLoading } = useGroupTree();
-  const deleteGroup = useDeleteGroup();
-  const [selectedGroup, setSelectedGroup] = React.useState<GroupTreeNode | null>(null);
 
-  const tree = treeData?.data ?? [];
+  const tree: GroupTreeNode[] = [
+    { id: "g1", name: "All Devices", description: null, type: "static", memberCount: 45, parentId: null, depth: 0, children: [
+      { id: "g2", name: "Warehouse", description: null, type: "static", memberCount: 20, parentId: "g1", depth: 1, children: [] },
+      { id: "g3", name: "Retail POS", description: null, type: "dynamic", memberCount: 15, parentId: "g1", depth: 1, children: [] },
+      { id: "g4", name: "Field Workers", description: null, type: "static", memberCount: 10, parentId: "g1", depth: 1, children: [] },
+    ]},
+  ];
+  const isLoading = false;
+
+  const [selectedGroup, setSelectedGroup] = React.useState<GroupTreeNode | null>(null);
 
   const handleSelect = (node: GroupTreeNode) => {
     setSelectedGroup(node);
   };
 
   const handleDrop = (draggedId: string, targetId: string) => {
-    // Reparent group via API
-    const updateMutation = useUpdateGroup(draggedId);
-    updateMutation.mutate({ parentId: targetId });
+    // No-op in demo mode
   };
 
   const handleDelete = (groupId: string) => {
-    if (confirm("Are you sure you want to delete this group?")) {
-      deleteGroup.mutate(groupId, {
-        onSuccess: () => setSelectedGroup(null),
-      });
-    }
+    // No-op in demo mode
   };
 
   const typeBadge = (type: string) => {

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
-import { FileText, Download, Search, ChevronDown, ChevronRight } from "lucide-react";
+import { useState, useRef } from "react";
+import { Download, Search, ChevronDown, ChevronRight } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useAuditLogs } from "@/hooks/queries/use-audit-logs";
 import type { AuditLog, ListAuditLogsParams } from "@/lib/types";
 
 const actorTypeColors: Record<string, "default" | "secondary" | "destructive"> = {
@@ -81,26 +80,33 @@ export default function AuditPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState("");
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
-    useAuditLogs(filters);
+  const isLoading = false;
+  const isFetchingNextPage = false;
+  const hasNextPage = false;
 
-  const allLogs = data?.pages.flatMap((p) => p.data) ?? [];
+  const allAuditLogs: AuditLog[] = [
+    { id: "al1", orgId: "org1", userId: "u1", actor: "admin@mdm.local", actorType: "user", actorDisplay: "admin@mdm.local", action: "device.enrolled", resource: "WH-001", resourceId: "WH-001", resourceType: "device", details: { method: "qr_code" }, ipAddress: "192.168.1.100", createdAt: new Date(Date.now() - 60000).toISOString() },
+    { id: "al2", orgId: "org1", userId: "u1", actor: "admin@mdm.local", actorType: "user", actorDisplay: "admin@mdm.local", action: "policy.created", resource: "WiFi Restriction", resourceId: "p1", resourceType: "policy", details: { name: "WiFi Restriction" }, ipAddress: "192.168.1.100", createdAt: new Date(Date.now() - 3600000).toISOString() },
+    { id: "al3", orgId: "org1", userId: null, actor: "compliance-engine", actorType: "system", actorDisplay: "compliance-engine", action: "compliance.violated", resource: "KSK-012", resourceId: "KSK-012", resourceType: "device", details: { rule: "OS Version >= 13", severity: "high" }, ipAddress: null, createdAt: new Date(Date.now() - 7200000).toISOString() },
+    { id: "al4", orgId: "org1", userId: "u1", actor: "admin@mdm.local", actorType: "user", actorDisplay: "admin@mdm.local", action: "command.dispatched", resource: "RT-POS-01", resourceId: "RT-POS-01", resourceType: "device", details: { type: "lock" }, ipAddress: "192.168.1.100", createdAt: new Date(Date.now() - 14400000).toISOString() },
+    { id: "al5", orgId: "org1", userId: null, actor: "WH-002", actorType: "device", actorDisplay: "WH-002", action: "device.heartbeat", resource: "WH-002", resourceId: "WH-002", resourceType: "device", details: { battery: 85 }, ipAddress: "10.0.1.15", createdAt: new Date(Date.now() - 30000).toISOString() },
+    { id: "al6", orgId: "org1", userId: "u1", actor: "admin@mdm.local", actorType: "user", actorDisplay: "admin@mdm.local", action: "app.installed", resource: "POS Terminal", resourceId: "POS Terminal", resourceType: "app", details: { version: "3.2.1", device: "RT-POS-01" }, ipAddress: "192.168.1.100", createdAt: new Date(Date.now() - 86400000).toISOString() },
+    { id: "al7", orgId: "org1", userId: null, actor: "cert-service", actorType: "system", actorDisplay: "cert-service", action: "certificate.expiring", resource: "c4", resourceId: "c4", resourceType: "certificate", details: { days_remaining: 7 }, ipAddress: null, createdAt: new Date(Date.now() - 172800000).toISOString() },
+    { id: "al8", orgId: "org1", userId: "u1", actor: "admin@mdm.local", actorType: "user", actorDisplay: "admin@mdm.local", action: "kiosk.activated", resource: "RT-POS-08", resourceId: "RT-POS-08", resourceType: "device", details: { mode: "single_app", app: "POS Terminal" }, ipAddress: "192.168.1.100", createdAt: new Date(Date.now() - 259200000).toISOString() },
+  ];
 
-  // Infinite scroll observer
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  const loadMoreRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      if (isFetchingNextPage) return;
-      if (observerRef.current) observerRef.current.disconnect();
-      observerRef.current = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && hasNextPage) {
-          fetchNextPage();
-        }
-      });
-      if (node) observerRef.current.observe(node);
-    },
-    [isFetchingNextPage, hasNextPage, fetchNextPage],
-  );
+  // Apply filters to dummy data
+  const allLogs = allAuditLogs.filter((log) => {
+    if (filters.actor_type && log.actorType !== filters.actor_type) return false;
+    if (filters.resource_type && log.resourceType !== filters.resource_type) return false;
+    if (filters.search) {
+      const s = filters.search.toLowerCase();
+      if (!log.action.toLowerCase().includes(s) && !log.resource.toLowerCase().includes(s) && !log.actorDisplay.toLowerCase().includes(s)) return false;
+    }
+    return true;
+  });
+
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   const handleSearch = () => {
     setFilters((f) => ({ ...f, search: searchInput || undefined }));

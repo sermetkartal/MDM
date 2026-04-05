@@ -104,27 +104,17 @@ const appColumns: Column<AppRow>[] = [
 // --- Main Page ---
 
 export default function AppsPage() {
-  const [apps, setApps] = React.useState<AppRow[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  // Dummy data replacing API fetch
+  const [apps] = React.useState<AppRow[]>([
+    { id: "a1", name: "MDM Agent", bundleId: "com.mdm.agent", type: "enterprise", platform: "android", createdAt: "2024-06-01T00:00:00Z" },
+    { id: "a2", name: "Corporate Browser", bundleId: "com.corp.browser", type: "enterprise", platform: "android", createdAt: "2024-06-15T00:00:00Z" },
+    { id: "a3", name: "POS Terminal", bundleId: "com.pos.terminal", type: "enterprise", platform: "android", createdAt: "2024-07-01T00:00:00Z" },
+    { id: "a4", name: "Inventory Scanner", bundleId: "com.inv.scanner", type: "enterprise", platform: "android", createdAt: "2024-07-10T00:00:00Z" },
+    { id: "a5", name: "Digital Signage", bundleId: "com.signage.player", type: "enterprise", platform: "android", createdAt: "2024-08-01T00:00:00Z" },
+  ]);
   const [selectedApp, setSelectedApp] = React.useState<App | null>(null);
   const [showCreateDialog, setShowCreateDialog] = React.useState(false);
-
-  const fetchApps = React.useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await api.get<{ data: App[]; pagination: unknown }>("/apps");
-      setApps(res.data);
-    } catch {
-      // API may not be available in dev
-      setApps([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  React.useEffect(() => {
-    fetchApps();
-  }, [fetchApps]);
+  const fetchApps = () => {};
 
   if (selectedApp) {
     return (

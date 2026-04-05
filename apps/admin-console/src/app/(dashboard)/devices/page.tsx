@@ -23,11 +23,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useDevices } from "@/hooks/queries/use-devices";
-import { useBulkAction } from "@/hooks/mutations/use-remote-action";
+// import { useDevices } from "@/hooks/queries/use-devices";
+// import { useBulkAction } from "@/hooks/mutations/use-remote-action";
 import { formatRelativeTime } from "@/lib/utils";
 import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
-import type { Device, ListDevicesParams } from "@/lib/types";
+// import type { Device, ListDevicesParams } from "@/lib/types";
 
 export default function DevicesPage() {
   const router = useRouter();
@@ -43,32 +43,21 @@ export default function DevicesPage() {
   });
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
 
-  const bulkAction = useBulkAction();
-
-  // Debounce search
-  React.useEffect(() => {
-    const timer = setTimeout(() => setFilters(prev => ({ ...prev, debouncedSearch: prev.search })), 300);
-    return () => clearTimeout(timer);
-  }, [filters.search]);
-
-  // Reset page on filter change
-  React.useEffect(() => {
-    setFilters(prev => ({ ...prev, page: 1 }));
-  }, [filters.debouncedSearch, filters.statusFilter, filters.complianceFilter]);
-
-  const params: ListDevicesParams = {
-    page: filters.page,
-    limit: filters.pageSize,
-    search: filters.debouncedSearch || undefined,
-    status: (filters.statusFilter as ListDevicesParams["status"]) || undefined,
-    complianceStatus: (filters.complianceFilter as ListDevicesParams["complianceStatus"]) || undefined,
-    sortBy: filters.sortBy,
-    sortOrder: filters.sortOrder,
-  };
-
-  const { data, isLoading, isError } = useDevices(params);
-  const devices = data?.data ?? [];
-  const pagination = data?.pagination;
+  // Dummy data replacing useDevices() and useBulkAction()
+  const devices = [
+    { id: "d1", serialNumber: "WH-001", name: "WH-001", model: "Galaxy Tab A8", manufacturer: "Samsung", osVersion: "Android 14", status: "enrolled", complianceStatus: "compliant", lastSeenAt: new Date().toISOString(), platform: "android" },
+    { id: "d2", serialNumber: "WH-002", name: "WH-002", model: "Galaxy Tab S9", manufacturer: "Samsung", osVersion: "Android 14", status: "enrolled", complianceStatus: "compliant", lastSeenAt: new Date(Date.now() - 120000).toISOString(), platform: "android" },
+    { id: "d3", serialNumber: "RT-POS-01", name: "RT-POS-01", model: "Pixel Tablet", manufacturer: "Google", osVersion: "Android 14", status: "enrolled", complianceStatus: "non_compliant", lastSeenAt: new Date(Date.now() - 3600000).toISOString(), platform: "android" },
+    { id: "d4", serialNumber: "FLD-007", name: "FLD-007", model: "Galaxy A54", manufacturer: "Samsung", osVersion: "Android 13", status: "enrolled", complianceStatus: "compliant", lastSeenAt: new Date(Date.now() - 7200000).toISOString(), platform: "android" },
+    { id: "d5", serialNumber: "KSK-012", name: "KSK-012", model: "Lenovo Tab M10", manufacturer: "Lenovo", osVersion: "Android 12", status: "enrolled", complianceStatus: "non_compliant", lastSeenAt: new Date(Date.now() - 86400000).toISOString(), platform: "android" },
+    { id: "d6", serialNumber: "OFF-003", name: "OFF-003", model: "iPad Pro 12.9", manufacturer: "Apple", osVersion: "iPadOS 17.4", status: "enrolled", complianceStatus: "compliant", lastSeenAt: new Date().toISOString(), platform: "ios" },
+    { id: "d7", serialNumber: "WH-015", name: "WH-015", model: "Galaxy Tab Active4", manufacturer: "Samsung", osVersion: "Android 14", status: "pending", complianceStatus: "unknown", lastSeenAt: null, platform: "android" },
+    { id: "d8", serialNumber: "RT-POS-08", name: "RT-POS-08", model: "Zebra ET40", manufacturer: "Zebra", osVersion: "Android 13", status: "enrolled", complianceStatus: "compliant", lastSeenAt: new Date(Date.now() - 300000).toISOString(), platform: "android" },
+  ];
+  const isLoading = false;
+  const isError = false;
+  const pagination = null;
+  const bulkAction = { mutate: (_args: unknown, _opts?: unknown) => {} };
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {

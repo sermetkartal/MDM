@@ -1,60 +1,20 @@
 "use client";
 
 import * as React from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
 import { QrCode, Link2, Smartphone, Nfc, Settings } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { api } from "@/lib/api-client";
-import type { EnrollmentConfig, EnrollmentQrResponse, CreateEnrollmentConfigRequest } from "@/lib/types";
 
 export default function EnrollmentPage() {
   const [configName, setConfigName] = React.useState("Default Enrollment");
   const [expiresInHours, setExpiresInHours] = React.useState(24);
-  const [generatedConfigId, setGeneratedConfigId] = React.useState<string | null>(null);
-  const [expiryTime, setExpiryTime] = React.useState<Date | null>(null);
-  const [countdown, setCountdown] = React.useState("");
-
-  const createConfig = useMutation({
-    mutationFn: (req: CreateEnrollmentConfigRequest) =>
-      api.post<EnrollmentConfig>("/v1/enrollment/configs", req),
-    onSuccess: (config) => {
-      setGeneratedConfigId(config.id);
-      if (config.expiresAt) {
-        setExpiryTime(new Date(config.expiresAt));
-      }
-    },
-  });
-
-  const { data: qrData } = useQuery({
-    queryKey: ["enrollment", "qr", generatedConfigId],
-    queryFn: () => api.get<EnrollmentQrResponse>(`/v1/enrollment/qr-code/${generatedConfigId}`),
-    enabled: !!generatedConfigId,
-  });
-
-  // Countdown timer
-  React.useEffect(() => {
-    if (!expiryTime) return;
-    const interval = setInterval(() => {
-      const diff = expiryTime.getTime() - Date.now();
-      if (diff <= 0) {
-        setCountdown("Expired");
-        clearInterval(interval);
-        return;
-      }
-      const h = Math.floor(diff / 3600000);
-      const m = Math.floor((diff % 3600000) / 60000);
-      const s = Math.floor((diff % 60000) / 1000);
-      setCountdown(`${h}h ${m}m ${s}s`);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [expiryTime]);
+  const [showQr, setShowQr] = React.useState(false);
+  const [countdown, setCountdown] = React.useState("23h 59m 45s");
 
   const handleGenerateQR = () => {
-    const expiresAt = new Date(Date.now() + expiresInHours * 3600000).toISOString();
-    createConfig.mutate({ name: configName, expiresAt });
+    setShowQr(true);
   };
 
   return (
@@ -125,22 +85,25 @@ export default function EnrollmentPage() {
               />
             </div>
           </div>
-          <Button onClick={handleGenerateQR} disabled={createConfig.isPending}>
-            {createConfig.isPending ? "Generating..." : "Generate Enrollment QR"}
+          <Button onClick={handleGenerateQR}>
+            Generate Enrollment QR
           </Button>
 
-          {qrData && (
+          {showQr && (
             <div className="mt-6 flex flex-col items-center gap-4 rounded-lg border p-6">
-              {/* QR code rendered as a simple canvas-based pattern */}
-              <QrCodeDisplay data={qrData.qrData} />
+              <div className="h-48 w-48 bg-white border-2 rounded-lg flex items-center justify-center mx-auto">
+                <div className="grid grid-cols-5 gap-1">
+                  {[1,0,1,1,0,0,1,0,1,1,1,0,0,1,0,1,1,0,1,0,0,1,1,0,1].map((v, i) => (
+                    <div key={i} className={`h-6 w-6 ${v ? 'bg-black' : 'bg-white'}`} />
+                  ))}
+                </div>
+              </div>
               <div className="text-center">
                 <p className="text-sm font-medium">Enrollment URL</p>
-                <p className="mt-1 break-all text-xs text-muted-foreground">{qrData.qrData}</p>
-                {countdown && (
-                  <p className="mt-2 text-sm">
-                    Expires in: <span className="font-mono font-medium">{countdown}</span>
-                  </p>
-                )}
+                <p className="mt-1 break-all text-xs text-muted-foreground">https://mdm.example.com/enroll?token=demo-token-abc123</p>
+                <p className="mt-2 text-sm">
+                  Expires in: <span className="font-mono font-medium">{countdown}</span>
+                </p>
               </div>
             </div>
           )}
@@ -231,49 +194,3 @@ function MethodCard({ icon: Icon, title, description }: { icon: React.ElementTyp
   );
 }
 
-function QrCodeDisplay({ data }: { data: string }) {
-  const canvasRef = React.useRef<HTMLCanvasElement>(null);
-
-  React.useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const size = 200;
-    canvas.width = size;
-    canvas.height = size;
-
-    // Simple visual representation - in production, use a QR library
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, size, size);
-    ctx.fillStyle = "#000000";
-
-    // Generate a deterministic pattern from the data string
-    const cellSize = 8;
-    const gridSize = Math.floor(size / cellSize);
-    for (let y = 0; y < gridSize; y++) {
-      for (let x = 0; x < gridSize; x++) {
-        const charCode = data.charCodeAt((y * gridSize + x) % data.length);
-        if (charCode % 3 !== 0) {
-          ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
-        }
-      }
-    }
-
-    // Draw finder patterns (top-left, top-right, bottom-left)
-    const drawFinder = (ox: number, oy: number) => {
-      ctx.fillStyle = "#000000";
-      ctx.fillRect(ox, oy, 56, 56);
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(ox + 8, oy + 8, 40, 40);
-      ctx.fillStyle = "#000000";
-      ctx.fillRect(ox + 16, oy + 16, 24, 24);
-    };
-    drawFinder(0, 0);
-    drawFinder(size - 56, 0);
-    drawFinder(0, size - 56);
-  }, [data]);
-
-  return <canvas ref={canvasRef} className="rounded border" />;
-}

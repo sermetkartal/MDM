@@ -1,81 +1,61 @@
-import { eq, and } from 'drizzle-orm';
 import crypto from 'node:crypto';
-import { db } from '../db/index.js';
-import { users, roles } from '../db/schema.js';
-import { registerSession } from '../middleware/auth.js';
 import type { FastifyInstance } from 'fastify';
+import { pool } from '../db/index.js';
 import type { TokenResponse } from '../types/index.js';
 
 export class AuthService {
   constructor(private app: FastifyInstance) {}
 
   async login(email: string, password: string, orgId?: string, ip?: string): Promise<TokenResponse> {
-    const query = orgId
-      ? and(eq(users.email, email), eq(users.orgId, orgId))
-      : eq(users.email, email);
+    // Find user
+    const userQuery = orgId
+      ? { text: 'SELECT id, email, org_id, password_hash, status, display_name FROM users WHERE email = $1 AND org_id = $2 LIMIT 1', values: [email, orgId] }
+      : { text: 'SELECT id, email, org_id, password_hash, status, display_name FROM users WHERE email = $1 LIMIT 1', values: [email] };
 
-    const [user] = await db
-      .select({
-        id: users.id,
-        email: users.email,
-        orgId: users.orgId,
-        roleId: users.roleId,
-        passwordHash: users.passwordHash,
-        isActive: users.isActive,
-      })
-      .from(users)
-      .where(query)
-      .limit(1);
+    const { rows: [user] } = await pool.query(userQuery);
 
     if (!user) {
       throw Object.assign(new Error('Invalid email or password'), { statusCode: 401 });
     }
 
-    if (!user.isActive) {
+    if (user.status !== 'active') {
       throw Object.assign(new Error('Account is disabled'), { statusCode: 403 });
     }
 
-    const valid = await this.verifyPassword(password, user.passwordHash);
+    const valid = await this.verifyPassword(password, user.password_hash);
     if (!valid) {
       throw Object.assign(new Error('Invalid email or password'), { statusCode: 401 });
     }
 
-    // Fetch role permissions
-    const [role] = await db
-      .select({ permissions: roles.permissions })
-      .from(roles)
-      .where(eq(roles.id, user.roleId))
-      .limit(1);
+    // Fetch permissions via user_roles -> roles
+    const { rows: roleRows } = await pool.query(
+      `SELECT r.permissions FROM roles r
+       INNER JOIN user_roles ur ON ur.role_id = r.id
+       WHERE ur.user_id = $1`,
+      [user.id]
+    );
 
-    const permissions = (role?.permissions as string[]) ?? [];
+    const permissions: string[] = roleRows.flatMap((r: any) => {
+      try { return Array.isArray(r.permissions) ? r.permissions : JSON.parse(r.permissions); }
+      catch { return []; }
+    });
 
     // Update last login
-    await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
+    await pool.query('UPDATE users SET last_login_at = NOW() WHERE id = $1', [user.id]);
 
     return this.generateTokens({
       sub: user.id,
       email: user.email,
-      orgId: user.orgId,
-      roleId: user.roleId,
+      orgId: user.org_id,
       permissions,
     }, ip);
   }
 
-  generateTokens(payload: { sub: string; email: string; orgId: string; roleId: string; permissions: string[] }, ip?: string): TokenResponse {
-    const sessionId = crypto.randomUUID();
-    const accessToken = this.app.jwt.sign({ ...payload, jti: sessionId }, { expiresIn: '15m' });
-    const refreshToken = this.app.jwt.sign({ sub: payload.sub, type: 'refresh', jti: sessionId }, { expiresIn: '7d' });
+  generateTokens(payload: { sub: string; email: string; orgId: string; permissions: string[] }, ip?: string): TokenResponse {
+    const accessToken = this.app.jwt.sign(payload, { expiresIn: '15m' });
+    const refreshToken = this.app.jwt.sign({ sub: payload.sub, type: 'refresh' }, { expiresIn: '7d' });
 
-    // Register session in Redis (fire and forget)
-    if (ip) {
-      registerSession(payload.sub, sessionId, ip).catch(() => {});
-    }
-
-    return {
-      accessToken,
-      refreshToken,
-      expiresIn: 900,
-    };
+    return { accessToken, refreshToken, expiresIn: 900 };
   }
 
   async refresh(refreshToken: string): Promise<TokenResponse> {
@@ -90,43 +70,55 @@ export class AuthService {
       throw Object.assign(new Error('Invalid token type'), { statusCode: 401 });
     }
 
-    const [user] = await db
-      .select({
-        id: users.id,
-        email: users.email,
-        orgId: users.orgId,
-        roleId: users.roleId,
-        isActive: users.isActive,
-      })
-      .from(users)
-      .where(eq(users.id, decoded.sub))
-      .limit(1);
+    const { rows: [user] } = await pool.query(
+      'SELECT id, email, org_id, status FROM users WHERE id = $1 LIMIT 1',
+      [decoded.sub]
+    );
 
-    if (!user || !user.isActive) {
+    if (!user || user.status !== 'active') {
       throw Object.assign(new Error('User not found or disabled'), { statusCode: 401 });
     }
 
-    const [role] = await db
-      .select({ permissions: roles.permissions })
-      .from(roles)
-      .where(eq(roles.id, user.roleId))
-      .limit(1);
+    const { rows: roleRows } = await pool.query(
+      `SELECT r.permissions FROM roles r INNER JOIN user_roles ur ON ur.role_id = r.id WHERE ur.user_id = $1`,
+      [user.id]
+    );
+
+    const permissions: string[] = roleRows.flatMap((r: any) => {
+      try { return Array.isArray(r.permissions) ? r.permissions : JSON.parse(r.permissions); }
+      catch { return []; }
+    });
 
     return this.generateTokens({
       sub: user.id,
       email: user.email,
-      orgId: user.orgId,
-      roleId: user.roleId,
-      permissions: (role?.permissions as string[]) ?? [],
+      orgId: user.org_id,
+      permissions,
     });
   }
 
   private async verifyPassword(password: string, hash: string): Promise<boolean> {
-    // Hash format: algorithm$salt$hash
-    const parts = hash.split('$');
-    if (parts.length !== 3) return false;
-    const [algo, salt, storedHash] = parts;
-    const computed = crypto.pbkdf2Sync(password, salt, 100000, 64, algo).toString('hex');
-    return crypto.timingSafeEqual(Buffer.from(computed), Buffer.from(storedHash));
+    if (!hash) return false;
+
+    // Support simple sha256 hash (for dev seed data)
+    if (hash.startsWith('sha256$')) {
+      const [, salt, storedHash] = hash.split('$');
+      const computed = crypto.createHash('sha256').update(salt + password).digest('hex');
+      return crypto.timingSafeEqual(Buffer.from(computed, 'hex'), Buffer.from(storedHash, 'hex'));
+    }
+
+    // Support pbkdf2
+    if (hash.includes('$') && !hash.startsWith('$argon2')) {
+      const parts = hash.split('$');
+      if (parts.length === 3) {
+        const [algo, salt, storedHash] = parts;
+        const computed = crypto.pbkdf2Sync(password, salt, 100000, 64, algo).toString('hex');
+        try {
+          return crypto.timingSafeEqual(Buffer.from(computed), Buffer.from(storedHash));
+        } catch { return false; }
+      }
+    }
+
+    return false;
   }
 }
