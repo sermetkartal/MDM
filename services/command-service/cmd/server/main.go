@@ -57,9 +57,9 @@ func main() {
 	// Start Prometheus metrics server
 	metricsMux := http.NewServeMux()
 	metricsMux.Handle("/metrics", promhttp.Handler())
-	metricsServer := &http.Server{Addr: ":9090", Handler: metricsMux}
+	metricsServer := &http.Server{Addr: ":9091", Handler: metricsMux}
 	go func() {
-		slog.Info("metrics server starting", "port", "9090")
+		slog.Info("metrics server starting", "port", "9091")
 		if err := metricsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			slog.Error("metrics server failed", "error", err)
 		}

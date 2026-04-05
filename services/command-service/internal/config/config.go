@@ -19,9 +19,9 @@ func Load() (*Config, error) {
 	cfg := &Config{
 		GRPCPort:        getEnv("GRPC_PORT", "50053"),
 		HTTPHealthPort:  getEnv("HTTP_HEALTH_PORT", "8083"),
-		DatabaseURL:     getEnv("DATABASE_URL", "postgres://mdm:mdm@localhost:5432/mdm?sslmode=disable"),
-		RedisURL:        getEnv("REDIS_URL", "redis://localhost:6379"),
-		NATSUrl:         getEnv("NATS_URL", "nats://localhost:4222"),
+		DatabaseURL:     getEnv("DATABASE_URL", "postgres://mdm:mdm_dev_password@localhost:5435/mdm?sslmode=disable"),
+		RedisURL:        getEnv("REDIS_URL", "redis://localhost:6381"),
+		NATSUrl:         getEnv("NATS_URL", "nats://localhost:4223"),
 		FCMCredentials:  getEnv("FCM_CREDENTIALS_FILE", ""),
 		ExpiryCheckSecs: 30,
 	}

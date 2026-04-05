@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, Users, Shield, Bell, Key, Globe, FolderSync } from "lucide-react";
+import { Building2, Users, Shield, Bell, Key, Globe, FolderSync, Cloud } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
@@ -41,6 +41,12 @@ const settingsSections = [
     title: "LDAP / Active Directory",
     description: "Sync users and groups from LDAP or Active Directory",
     href: "/settings/ldap",
+  },
+  {
+    icon: Cloud,
+    title: "External Services",
+    description: "FCM, APNs, S3, SMTP, Vault, TURN server configuration",
+    href: "/settings/external-services",
   },
   {
     icon: Bell,
