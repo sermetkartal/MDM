@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { QrCode, Link2, Smartphone, Nfc, Settings } from "lucide-react";
+import { QrCode, Link2, Smartphone, Nfc, Settings, Package } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,27 @@ export default function EnrollmentPage() {
         title="Enrollment"
         description="Configure enrollment methods and onboard new devices"
       />
+
+      {/* APK Builder Shortcut */}
+      <Card>
+        <CardContent className="flex items-center justify-between p-4">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-orange-100 p-2 dark:bg-orange-900">
+              <Package className="h-5 w-5 text-orange-600 dark:text-orange-300" />
+            </div>
+            <div>
+              <p className="text-sm font-medium">Agent APK Builder</p>
+              <p className="text-xs text-muted-foreground">
+                Configure, build, and download a pre-configured MDM agent APK for Android devices
+              </p>
+            </div>
+          </div>
+          <Button onClick={() => window.location.href = "/enrollment/apk-builder"}>
+            <Package className="mr-2 h-4 w-4" />
+            APK Builder
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Method Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
