@@ -1,0 +1,106 @@
+# Production environment overrides
+# Usage: helm install <chart> -f values/production.yaml
+
+device-service:
+  replicaCount: 3
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  hpa:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 15
+    targetCPU: 70
+    targetMemory: 75
+  env:
+    LOG_LEVEL: "warn"
+    DATABASE_URL: "postgres://mdm:mdm@postgres:5432/mdm_devices?sslmode=require"
+    REDIS_URL: "redis://redis:6379/0"
+    NATS_URL: "nats://nats:4222"
+
+policy-service:
+  replicaCount: 3
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  hpa:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPU: 70
+    targetMemory: 75
+  env:
+    LOG_LEVEL: "warn"
+    DATABASE_URL: "postgres://mdm:mdm@postgres:5432/mdm_policies?sslmode=require"
+    REDIS_URL: "redis://redis:6379/1"
+    NATS_URL: "nats://nats:4222"
+
+command-service:
+  replicaCount: 3
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  hpa:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 15
+    targetCPU: 70
+    targetMemory: 75
+  env:
+    LOG_LEVEL: "warn"
+    DATABASE_URL: "postgres://mdm:mdm@postgres:5432/mdm_commands?sslmode=require"
+    REDIS_URL: "redis://redis:6379/2"
+    NATS_URL: "nats://nats:4222"
+
+admin-api:
+  replicaCount: 3
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  hpa:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPU: 70
+    targetMemory: 75
+  env:
+    LOG_LEVEL: "warn"
+    NODE_ENV: "production"
+    DATABASE_URL: "postgres://mdm:mdm@postgres:5432/mdm?sslmode=require"
+    REDIS_URL: "redis://redis:6379/3"
+    NATS_URL: "nats://nats:4222"
+
+admin-console:
+  replicaCount: 3
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  hpa:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 8
+    targetCPU: 70
+    targetMemory: 75
+  env:
+    LOG_LEVEL: "warn"
+    NODE_ENV: "production"

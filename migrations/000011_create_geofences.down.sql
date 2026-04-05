@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS geofence_policies CASCADE;
+DROP TABLE IF EXISTS geofences CASCADE;

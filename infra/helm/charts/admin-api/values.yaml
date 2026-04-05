@@ -1,0 +1,49 @@
+replicaCount: 2
+
+image:
+  repository: mdm/admin-api
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 3001
+  portName: http
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+hpa:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 8
+  targetCPU: 75
+  targetMemory: 80
+
+probes:
+  liveness:
+    initialDelaySeconds: 10
+    periodSeconds: 15
+    timeoutSeconds: 3
+    failureThreshold: 3
+  readiness:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+env:
+  DATABASE_URL: "postgres://mdm:mdm@postgres:5432/mdm?sslmode=disable"
+  REDIS_URL: "redis://redis:6379/3"
+  NATS_URL: "nats://nats:4222"
+  DEVICE_SERVICE_URL: "device-service:50051"
+  POLICY_SERVICE_URL: "policy-service:50052"
+  COMMAND_SERVICE_URL: "command-service:50053"
+  LOG_LEVEL: "info"
+  PORT: "3001"
+  NODE_ENV: "production"

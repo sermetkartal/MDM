@@ -1,0 +1,54 @@
+image:
+  repository: mdm/backup-tools
+  tag: latest
+  pullPolicy: IfNotPresent
+
+s3:
+  bucket: mdm-backups
+  prefix: mdm
+  region: us-east-1
+
+retention:
+  daily: 30
+  monthly: 12
+  rawTelemetryDays: 90
+  hourlyAggregateDays: 365
+  dailyAggregateDays: 1825
+
+notification:
+  webhookUrl: ""
+
+postgres:
+  host: postgres.mdm.svc.cluster.local
+  port: 5432
+  database: mdm
+  secretName: postgres-credentials
+  secretUserKey: username
+  secretPasswordKey: password
+
+redis:
+  host: redis.mdm.svc.cluster.local
+  port: 6379
+  secretName: redis-credentials
+  secretPasswordKey: password
+  dataDir: /data
+
+vault:
+  address: https://vault.mdm.svc.cluster.local:8200
+  secretName: vault-backup-token
+  secretTokenKey: token
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+serviceAccount:
+  name: backup-jobs
+  annotations: {}
+
+nodeSelector: {}
+tolerations: []

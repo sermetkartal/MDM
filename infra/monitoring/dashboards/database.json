@@ -1,0 +1,111 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "mdm-database",
+    "title": "MDM Database Health",
+    "tags": ["mdm", "database", "postgres"],
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": { "from": "now-1h", "to": "now" },
+    "templating": {
+      "list": [
+        {
+          "name": "timeRange",
+          "type": "interval",
+          "options": [
+            { "text": "5m", "value": "5m" },
+            { "text": "15m", "value": "15m" },
+            { "text": "1h", "value": "1h" }
+          ],
+          "current": { "text": "5m", "value": "5m" }
+        }
+      ]
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Query Latency (p50 / p95 / p99)",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(pg_stat_activity_query_duration_seconds_bucket[$timeRange])) by (le))",
+            "legendFormat": "p50"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(pg_stat_activity_query_duration_seconds_bucket[$timeRange])) by (le))",
+            "legendFormat": "p95"
+          },
+          {
+            "expr": "histogram_quantile(0.99, sum(rate(pg_stat_activity_query_duration_seconds_bucket[$timeRange])) by (le))",
+            "legendFormat": "p99"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": { "unit": "s" }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Active Connections",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+        "targets": [
+          {
+            "expr": "pg_stat_activity_count",
+            "legendFormat": "Active"
+          },
+          {
+            "expr": "pg_settings_max_connections",
+            "legendFormat": "Max"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Replication Lag",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+        "targets": [
+          {
+            "expr": "pg_replication_lag",
+            "legendFormat": "{{instance}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": { "unit": "s" }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Table Sizes (Top 10)",
+        "type": "bargauge",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+        "targets": [
+          {
+            "expr": "topk(10, pg_total_relation_size_bytes)",
+            "legendFormat": "{{relname}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": { "unit": "bytes" }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Slow Queries (> 1s)",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+        "targets": [
+          {
+            "expr": "rate(pg_stat_statements_calls_total{mean_time_seconds>\".001\"}[$timeRange])",
+            "legendFormat": "{{query}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": { "unit": "ops" }
+        }
+      }
+    ]
+  }
+}

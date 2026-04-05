@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package mdm.command.v1;
+
+option go_package = "github.com/sermetkartal/mdm/gen/go/command/v1;commandv1";
+
+import "google/protobuf/timestamp.proto";
+import "common/v1/common.proto";
+
+service CommandService {
+  rpc DispatchCommand(DispatchCommandRequest) returns (DispatchCommandResponse);
+  rpc CancelCommand(CancelCommandRequest) returns (CancelCommandResponse);
+  rpc BulkDispatch(BulkDispatchRequest) returns (BulkDispatchResponse);
+  rpc GetCommandStatus(GetCommandStatusRequest) returns (GetCommandStatusResponse);
+}
+
+message DispatchCommandRequest {
+  string device_id = 1;
+  mdm.common.v1.CommandType type = 2;
+  bytes payload = 3;
+  int32 priority = 4;
+  google.protobuf.Timestamp expires_at = 5;
+}
+
+message DispatchCommandResponse {
+  string command_id = 1;
+  mdm.common.v1.CommandStatus status = 2;
+}
+
+message CancelCommandRequest {
+  string command_id = 1;
+  string reason = 2;
+}
+
+message CancelCommandResponse {
+  bool success = 1;
+  mdm.common.v1.CommandStatus previous_status = 2;
+}
+
+message BulkDispatchRequest {
+  repeated string device_ids = 1;
+  mdm.common.v1.CommandType type = 2;
+  bytes payload = 3;
+  int32 priority = 4;
+  google.protobuf.Timestamp expires_at = 5;
+}
+
+message BulkDispatchResponse {
+  int32 dispatched_count = 1;
+  int32 failed_count = 2;
+  repeated BulkDispatchError errors = 3;
+}
+
+message BulkDispatchError {
+  string device_id = 1;
+  string error = 2;
+}
+
+message GetCommandStatusRequest {
+  string command_id = 1;
+}
+
+message GetCommandStatusResponse {
+  string command_id = 1;
+  string device_id = 2;
+  mdm.common.v1.CommandType type = 3;
+  mdm.common.v1.CommandStatus status = 4;
+  string detail = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}

@@ -1,0 +1,4 @@
+DROP TABLE IF EXISTS policy_assignments CASCADE;
+DROP TABLE IF EXISTS policy_versions CASCADE;
+DROP TABLE IF EXISTS policies CASCADE;
+DROP TYPE IF EXISTS policy_type;

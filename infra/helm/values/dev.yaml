@@ -1,0 +1,86 @@
+# Development environment overrides
+# Usage: helm install <chart> -f values/dev.yaml
+
+device-service:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  hpa:
+    enabled: false
+  env:
+    LOG_LEVEL: "debug"
+    DATABASE_URL: "postgres://mdm:mdm@postgres:5432/mdm_devices?sslmode=disable"
+    REDIS_URL: "redis://redis:6379/0"
+    NATS_URL: "nats://nats:4222"
+
+policy-service:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  hpa:
+    enabled: false
+  env:
+    LOG_LEVEL: "debug"
+    DATABASE_URL: "postgres://mdm:mdm@postgres:5432/mdm_policies?sslmode=disable"
+    REDIS_URL: "redis://redis:6379/1"
+    NATS_URL: "nats://nats:4222"
+
+command-service:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  hpa:
+    enabled: false
+  env:
+    LOG_LEVEL: "debug"
+    DATABASE_URL: "postgres://mdm:mdm@postgres:5432/mdm_commands?sslmode=disable"
+    REDIS_URL: "redis://redis:6379/2"
+    NATS_URL: "nats://nats:4222"
+
+admin-api:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  hpa:
+    enabled: false
+  env:
+    LOG_LEVEL: "debug"
+    NODE_ENV: "development"
+    DATABASE_URL: "postgres://mdm:mdm@postgres:5432/mdm?sslmode=disable"
+    REDIS_URL: "redis://redis:6379/3"
+    NATS_URL: "nats://nats:4222"
+
+admin-console:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  hpa:
+    enabled: false
+  env:
+    LOG_LEVEL: "debug"
+    NODE_ENV: "development"

@@ -1,0 +1,74 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Go
+*.test
+*.out
+coverage.out
+coverage.html
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+!*.tfvars.example
+
+# Android
+clients/android/.gradle/
+clients/android/build/
+clients/android/*/build/
+clients/android/local.properties
+*.apk
+*.aab
+
+# Logs
+*.log
+logs/
+
+# Secrets (never commit)
+*.pem
+*.key
+*.p12
+*.jks
+credentials.json
+service-account.json
+
+# Test
+coverage/
+.nyc_output/
+test-results/
+
+# Turbo
+.turbo/

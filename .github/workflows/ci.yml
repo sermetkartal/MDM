@@ -1,0 +1,174 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-go:
+    name: Lint Go
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: services/device-service
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: services/policy-service
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: services/command-service
+
+  lint-ts:
+    name: Lint TypeScript
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: |
+            services/admin-api/package-lock.json
+            services/admin-console/package-lock.json
+      - name: Lint admin-api
+        working-directory: services/admin-api
+        run: |
+          npm ci
+          npx eslint .
+      - name: Lint admin-console
+        working-directory: services/admin-console
+        run: |
+          npm ci
+          npx eslint .
+
+  typecheck:
+    name: TypeScript Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: |
+            services/admin-api/package-lock.json
+            services/admin-console/package-lock.json
+      - name: Typecheck admin-api
+        working-directory: services/admin-api
+        run: |
+          npm ci
+          npx tsc --noEmit
+      - name: Typecheck admin-console
+        working-directory: services/admin-console
+        run: |
+          npm ci
+          npx tsc --noEmit
+
+  test-go:
+    name: Test Go
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: mdm
+          POSTGRES_PASSWORD: mdm
+          POSTGRES_DB: mdm_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      nats:
+        image: nats:2-alpine
+        ports:
+          - 4222:4222
+        options: >-
+          --health-cmd "nats-server --help"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - name: Test device-service
+        working-directory: services/device-service
+        env:
+          DATABASE_URL: postgres://mdm:mdm@localhost:5432/mdm_test?sslmode=disable
+          NATS_URL: nats://localhost:4222
+        run: go test -race -coverprofile=coverage.out ./...
+      - name: Test policy-service
+        working-directory: services/policy-service
+        env:
+          DATABASE_URL: postgres://mdm:mdm@localhost:5432/mdm_test?sslmode=disable
+          NATS_URL: nats://localhost:4222
+        run: go test -race -coverprofile=coverage.out ./...
+      - name: Test command-service
+        working-directory: services/command-service
+        env:
+          DATABASE_URL: postgres://mdm:mdm@localhost:5432/mdm_test?sslmode=disable
+          NATS_URL: nats://localhost:4222
+        run: go test -race -coverprofile=coverage.out ./...
+
+  test-ts:
+    name: Test TypeScript
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: |
+            services/admin-api/package-lock.json
+            services/admin-console/package-lock.json
+      - name: Test admin-api
+        working-directory: services/admin-api
+        run: |
+          npm ci
+          npm test
+      - name: Test admin-console
+        working-directory: services/admin-console
+        run: |
+          npm ci
+          npm test
+
+  build-docker:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    needs: [lint-go, lint-ts, typecheck, test-go, test-ts]
+    strategy:
+      matrix:
+        service:
+          - { name: device-service, dockerfile: infra/docker/device-service.Dockerfile }
+          - { name: policy-service, dockerfile: infra/docker/policy-service.Dockerfile }
+          - { name: command-service, dockerfile: infra/docker/command-service.Dockerfile }
+          - { name: admin-api, dockerfile: infra/docker/admin-api.Dockerfile }
+          - { name: admin-console, dockerfile: infra/docker/admin-console.Dockerfile }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.service.dockerfile }}
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: mdm/${{ matrix.service.name }}:${{ github.sha }}

@@ -1,0 +1,202 @@
+syntax = "proto3";
+
+package mdm.device.v1;
+
+option go_package = "github.com/sermetkartal/mdm/gen/go/device/v1;devicev1";
+
+import "google/protobuf/timestamp.proto";
+import "common/v1/common.proto";
+
+service DeviceService {
+  rpc Enroll(EnrollRequest) returns (EnrollResponse);
+  rpc Unenroll(UnenrollRequest) returns (UnenrollResponse);
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+  rpc CommandStream(stream CommandAck) returns (stream Command);
+  rpc ReportTelemetry(stream TelemetryEvent) returns (TelemetryAck);
+  rpc ReportLocation(LocationReport) returns (LocationAck);
+  rpc SyncAppInventory(AppInventoryRequest) returns (AppInventoryResponse);
+  rpc RequestCertificate(CertRequest) returns (CertResponse);
+  rpc ReportCompliance(ComplianceReport) returns (ComplianceAck);
+}
+
+// Enrollment
+
+message EnrollRequest {
+  string serial_number = 1;
+  string hardware_id = 2;
+  string model = 3;
+  string manufacturer = 4;
+  string os_version = 5;
+  string agent_version = 6;
+  bytes play_integrity_token = 7;
+  bytes csr = 8;
+  mdm.common.v1.EnrollmentMethod enrollment_method = 9;
+}
+
+message EnrollResponse {
+  string device_id = 1;
+  bytes client_certificate = 2;
+  repeated PolicyPayload initial_policies = 3;
+  string server_url = 4;
+  int32 heartbeat_interval_seconds = 5;
+}
+
+message PolicyPayload {
+  string policy_id = 1;
+  mdm.common.v1.PolicyType type = 2;
+  int32 priority = 3;
+  string config_json = 4;
+  int64 version = 5;
+}
+
+// Unenroll
+
+message UnenrollRequest {
+  string device_id = 1;
+  string reason = 2;
+}
+
+message UnenrollResponse {
+  bool success = 1;
+}
+
+// Heartbeat
+
+message HeartbeatRequest {
+  string device_id = 1;
+  int32 battery_level = 2;
+  int64 storage_free_bytes = 3;
+  int64 memory_free_bytes = 4;
+  string os_version = 5;
+  string agent_version = 6;
+  repeated InstalledApp installed_apps = 7;
+  DeviceSecurityState security_state = 8;
+}
+
+message HeartbeatResponse {
+  int32 next_heartbeat_seconds = 1;
+  repeated PendingAction pending_actions = 2;
+}
+
+message PendingAction {
+  string action_id = 1;
+  mdm.common.v1.CommandType type = 2;
+  bytes payload = 3;
+  int32 priority = 4;
+}
+
+// Command stream
+
+message Command {
+  string command_id = 1;
+  mdm.common.v1.CommandType type = 2;
+  bytes payload = 3;
+  google.protobuf.Timestamp expires_at = 4;
+  int32 priority = 5;
+}
+
+message CommandAck {
+  string command_id = 1;
+  mdm.common.v1.CommandStatus status = 2;
+  string detail = 3;
+  google.protobuf.Timestamp timestamp = 4;
+}
+
+// Telemetry
+
+message TelemetryEvent {
+  string device_id = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  int32 battery_level = 3;
+  int64 storage_free_bytes = 4;
+  int64 memory_free_bytes = 5;
+  int32 wifi_signal_dbm = 6;
+  int32 cellular_signal_dbm = 7;
+  double latitude = 8;
+  double longitude = 9;
+  map<string, string> extra = 10;
+}
+
+message TelemetryAck {
+  int32 received_count = 1;
+}
+
+// Location
+
+message LocationReport {
+  string device_id = 1;
+  double latitude = 2;
+  double longitude = 3;
+  float accuracy = 4;
+  double altitude = 5;
+  float speed = 6;
+  float bearing = 7;
+  string provider = 8;
+  google.protobuf.Timestamp timestamp = 9;
+}
+
+message LocationAck {
+  bool accepted = 1;
+}
+
+// App inventory
+
+message AppInventoryRequest {
+  string device_id = 1;
+  repeated InstalledApp apps = 2;
+}
+
+message AppInventoryResponse {
+  int32 synced_count = 1;
+}
+
+message InstalledApp {
+  string package_name = 1;
+  int64 version_code = 2;
+  string version_name = 3;
+  string app_name = 4;
+  bool is_system_app = 5;
+}
+
+// Security state
+
+message DeviceSecurityState {
+  bool is_encrypted = 1;
+  bool is_rooted = 2;
+  bool developer_options_enabled = 3;
+  bool usb_debugging_enabled = 4;
+  bool screen_lock_enabled = 5;
+  string play_integrity_verdict = 6;
+}
+
+// Certificate
+
+message CertRequest {
+  string device_id = 1;
+  bytes csr = 2;
+  string usage = 3;
+}
+
+message CertResponse {
+  bytes certificate = 1;
+  google.protobuf.Timestamp expires_at = 2;
+}
+
+// Compliance
+
+message ComplianceReport {
+  string device_id = 1;
+  mdm.common.v1.ComplianceState state = 2;
+  repeated ComplianceViolation violations = 3;
+  google.protobuf.Timestamp timestamp = 4;
+}
+
+message ComplianceViolation {
+  string policy_id = 1;
+  string rule = 2;
+  string detail = 3;
+}
+
+message ComplianceAck {
+  bool received = 1;
+}

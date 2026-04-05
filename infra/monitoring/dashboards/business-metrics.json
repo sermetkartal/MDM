@@ -1,0 +1,146 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "mdm-business-metrics",
+    "title": "MDM Business Metrics",
+    "tags": ["mdm", "business"],
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": { "from": "now-7d", "to": "now" },
+    "templating": {
+      "list": [
+        {
+          "name": "org",
+          "type": "query",
+          "query": "label_values(mdm_devices_total, org)",
+          "datasource": "Prometheus",
+          "includeAll": true,
+          "allValue": ".*",
+          "current": { "text": "All", "value": "$__all" }
+        },
+        {
+          "name": "timeRange",
+          "type": "interval",
+          "options": [
+            { "text": "1h", "value": "1h" },
+            { "text": "24h", "value": "24h" },
+            { "text": "7d", "value": "7d" }
+          ],
+          "current": { "text": "24h", "value": "24h" }
+        }
+      ]
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Enrollments per Day",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+        "targets": [
+          {
+            "expr": "sum(increase(mdm_devices_total{org=~\"$org\"}[1d]))",
+            "legendFormat": "Enrollments/day"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": { "custom": { "drawStyle": "bars" } }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Compliance Rate",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+        "targets": [
+          {
+            "expr": "(sum(mdm_devices_total{org=~\"$org\",status=\"compliant\"}) / sum(mdm_devices_total{org=~\"$org\"})) * 100",
+            "legendFormat": "Compliance %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "steps": [
+                { "color": "red", "value": 0 },
+                { "color": "yellow", "value": 80 },
+                { "color": "green", "value": 95 }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Policy Deployment Success Rate",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 8, "x": 0, "y": 8 },
+        "targets": [
+          {
+            "expr": "(sum(mdm_policy_deployments_total{org=~\"$org\",status=\"success\"}) / sum(mdm_policy_deployments_total{org=~\"$org\"})) * 100",
+            "legendFormat": "Success %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": { "unit": "percent" }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Active Kiosk Devices",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 8, "x": 8, "y": 8 },
+        "targets": [
+          {
+            "expr": "sum(mdm_devices_total{org=~\"$org\",status=\"kiosk\"})",
+            "legendFormat": "Kiosk Devices"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "App Install Success Rate",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 8, "x": 16, "y": 8 },
+        "targets": [
+          {
+            "expr": "(sum(mdm_commands_total{type=\"install_app\",status=\"success\"}) / sum(mdm_commands_total{type=\"install_app\"})) * 100",
+            "legendFormat": "Install Success %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": { "unit": "percent" }
+        }
+      },
+      {
+        "id": 6,
+        "title": "Compliance Violations by Severity",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+        "targets": [
+          {
+            "expr": "sum by (severity) (mdm_compliance_violations{org=~\"$org\"})",
+            "legendFormat": "{{severity}}"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Policy Deployments Over Time",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+        "targets": [
+          {
+            "expr": "sum by (status) (rate(mdm_policy_deployments_total{org=~\"$org\"}[$timeRange]))",
+            "legendFormat": "{{status}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": { "unit": "ops" }
+        }
+      }
+    ]
+  }
+}

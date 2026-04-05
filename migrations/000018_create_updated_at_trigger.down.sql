@@ -1,0 +1,14 @@
+DROP TRIGGER IF EXISTS trg_integrations_updated_at ON integrations;
+DROP TRIGGER IF EXISTS trg_webhooks_updated_at ON webhooks;
+DROP TRIGGER IF EXISTS trg_geofences_updated_at ON geofences;
+DROP TRIGGER IF EXISTS trg_compliance_rules_updated_at ON compliance_rules;
+DROP TRIGGER IF EXISTS trg_kiosk_profiles_updated_at ON kiosk_profiles;
+DROP TRIGGER IF EXISTS trg_apps_updated_at ON apps;
+DROP TRIGGER IF EXISTS trg_commands_updated_at ON commands;
+DROP TRIGGER IF EXISTS trg_policies_updated_at ON policies;
+DROP TRIGGER IF EXISTS trg_device_groups_updated_at ON device_groups;
+DROP TRIGGER IF EXISTS trg_device_properties_updated_at ON device_properties;
+DROP TRIGGER IF EXISTS trg_devices_updated_at ON devices;
+DROP TRIGGER IF EXISTS trg_users_updated_at ON users;
+DROP TRIGGER IF EXISTS trg_organizations_updated_at ON organizations;
+DROP FUNCTION IF EXISTS set_updated_at();

@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package mdm.policy.v1;
+
+option go_package = "github.com/sermetkartal/mdm/gen/go/policy/v1;policyv1";
+
+import "common/v1/common.proto";
+
+service PolicyService {
+  rpc GetEffectivePolicies(GetEffectivePoliciesRequest) returns (GetEffectivePoliciesResponse);
+  rpc NotifyPolicyChange(PolicyChangeEvent) returns (PolicyChangeAck);
+}
+
+message PolicyPayload {
+  string policy_id = 1;
+  mdm.common.v1.PolicyType type = 2;
+  int32 priority = 3;
+  string config_json = 4;
+  int64 version = 5;
+}
+
+message GetEffectivePoliciesRequest {
+  string device_id = 1;
+  string org_id = 2;
+}
+
+message GetEffectivePoliciesResponse {
+  repeated PolicyPayload policies = 1;
+}
+
+message PolicyChangeEvent {
+  string policy_id = 1;
+  string org_id = 2;
+  repeated string affected_device_ids = 3;
+  PolicyPayload policy = 4;
+}
+
+message PolicyChangeAck {
+  bool accepted = 1;
+  int32 devices_notified = 2;
+}

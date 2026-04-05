@@ -1,0 +1,13 @@
+go 1.26.1
+
+use (
+	./services/cert-service
+	./services/command-service
+	./services/compliance-service
+	./services/device-service
+	./services/geofence-service
+	./services/ios-mdm-service
+	./services/kiosk-service
+	./services/policy-service
+	./services/remote-control-service
+)

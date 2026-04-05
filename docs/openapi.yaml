@@ -1,0 +1,2443 @@
+openapi: 3.1.0
+info:
+  title: MDM Platform API
+  description: REST API for the MDM admin console. Manages devices, policies, apps, compliance, and more.
+  version: 1.0.0
+  contact:
+    name: MDM Platform Team
+  license:
+    name: Proprietary
+
+servers:
+  - url: http://localhost:3001/api/v1
+    description: Local development
+  - url: https://api.staging.mdm.example.com/api/v1
+    description: Staging
+  - url: https://api.mdm.example.com/api/v1
+    description: Production
+
+security:
+  - bearerAuth: []
+  - apiKeyAuth: []
+
+tags:
+  - name: auth
+    description: Authentication and session management
+  - name: devices
+    description: Device management and commands
+  - name: policies
+    description: Policy lifecycle and assignments
+  - name: groups
+    description: Device group management
+  - name: commands
+    description: Command management and bulk operations
+  - name: apps
+    description: Application management, versions, and assignments
+  - name: kiosk
+    description: Kiosk profile management
+  - name: compliance
+    description: Compliance rules, status, and violations
+  - name: geofences
+    description: Geofence management
+  - name: audit
+    description: Audit log queries
+  - name: webhooks
+    description: Webhook management and delivery history
+  - name: enrollment
+    description: Device enrollment configurations and QR codes
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    LimitParam:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+    SortByParam:
+      name: sortBy
+      in: query
+      schema:
+        type: string
+        default: createdAt
+    SortOrderParam:
+      name: sortOrder
+      in: query
+      schema:
+        type: string
+        enum: [asc, desc]
+        default: desc
+    IdParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    Pagination:
+      type: object
+      required: [page, limit, total, totalPages]
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+
+    ApiError:
+      type: object
+      required: [statusCode, error, message]
+      properties:
+        statusCode:
+          type: integer
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+        requestId:
+          type: string
+
+    Platform:
+      type: string
+      enum: [ios, android, windows, macos, linux]
+
+    DeviceStatus:
+      type: string
+      enum: [enrolled, pending, blocked, wiped, retired]
+
+    ComplianceStatus:
+      type: string
+      enum: [compliant, non_compliant, unknown]
+
+    CommandStatus:
+      type: string
+      enum: [pending, queued, delivered, acknowledged, completed, failed, cancelled]
+
+    Severity:
+      type: string
+      enum: [low, medium, high, critical]
+
+    AppType:
+      type: string
+      enum: [public, enterprise, web_clip]
+
+    # --- Auth ---
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 1
+        orgId:
+          type: string
+          format: uuid
+
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+
+    TokenResponse:
+      type: object
+      required: [accessToken, refreshToken, expiresIn]
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresIn:
+          type: integer
+          description: Token lifetime in seconds
+
+    # --- Device ---
+    Device:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        orgId:
+          type: string
+          format: uuid
+        udid:
+          type: string
+        serialNumber:
+          type: string
+        name:
+          type: string
+        platform:
+          $ref: '#/components/schemas/Platform'
+        osVersion:
+          type: string
+        model:
+          type: string
+        manufacturer:
+          type: string
+        status:
+          $ref: '#/components/schemas/DeviceStatus'
+        complianceStatus:
+          $ref: '#/components/schemas/ComplianceStatus'
+        lastSeenAt:
+          type: string
+          format: date-time
+        enrolledAt:
+          type: string
+          format: date-time
+        deviceInfo:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    DeviceListResponse:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Device'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    SendCommandRequest:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          minLength: 1
+        payload:
+          type: object
+          default: {}
+
+    # --- Policy ---
+    Policy:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        orgId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        platform:
+          $ref: '#/components/schemas/Platform'
+        version:
+          type: integer
+        payload:
+          type: object
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreatePolicyRequest:
+      type: object
+      required: [name, platform, payload]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+        platform:
+          $ref: '#/components/schemas/Platform'
+        payload:
+          type: object
+
+    UpdatePolicyRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+        payload:
+          type: object
+        isActive:
+          type: boolean
+
+    PolicyAssignmentRequest:
+      type: object
+      properties:
+        deviceId:
+          type: string
+          format: uuid
+        groupId:
+          type: string
+          format: uuid
+
+    PolicyVersion:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        policyId:
+          type: string
+          format: uuid
+        version:
+          type: integer
+        payload:
+          type: object
+        createdBy:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+
+    PolicyListResponse:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Policy'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    # --- Device Group ---
+    DeviceGroup:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        orgId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        isDynamic:
+          type: boolean
+        dynamicFilter:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateGroupRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+        isDynamic:
+          type: boolean
+          default: false
+        dynamicFilter:
+          type: object
+
+    UpdateGroupRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+        dynamicFilter:
+          type: object
+
+    AddGroupMemberRequest:
+      type: object
+      required: [deviceId]
+      properties:
+        deviceId:
+          type: string
+          format: uuid
+
+    GroupListResponse:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceGroup'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    # --- Command ---
+    Command:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        orgId:
+          type: string
+          format: uuid
+        deviceId:
+          type: string
+          format: uuid
+        type:
+          type: string
+        payload:
+          type: object
+        status:
+          $ref: '#/components/schemas/CommandStatus'
+        result:
+          type: object
+        issuedBy:
+          type: string
+          format: uuid
+        issuedAt:
+          type: string
+          format: date-time
+        deliveredAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+
+    BulkCommandRequest:
+      type: object
+      required: [type, deviceIds]
+      properties:
+        type:
+          type: string
+          minLength: 1
+        payload:
+          type: object
+          default: {}
+        deviceIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+          maxItems: 500
+
+    CommandListResponse:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Command'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    # --- App ---
+    App:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        orgId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        bundleId:
+          type: string
+        platform:
+          $ref: '#/components/schemas/Platform'
+        type:
+          $ref: '#/components/schemas/AppType'
+        iconUrl:
+          type: string
+          format: uri
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateAppRequest:
+      type: object
+      required: [name, bundleId, platform]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        bundleId:
+          type: string
+          minLength: 1
+          maxLength: 255
+        platform:
+          $ref: '#/components/schemas/Platform'
+        type:
+          $ref: '#/components/schemas/AppType'
+        iconUrl:
+          type: string
+          format: uri
+        description:
+          type: string
+
+    UpdateAppRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        iconUrl:
+          type: string
+          format: uri
+        description:
+          type: string
+
+    CreateAppVersionRequest:
+      type: object
+      required: [version]
+      properties:
+        version:
+          type: string
+          minLength: 1
+        downloadUrl:
+          type: string
+          format: uri
+        releaseNotes:
+          type: string
+
+    AppAssignmentRequest:
+      type: object
+      properties:
+        deviceId:
+          type: string
+          format: uuid
+        groupId:
+          type: string
+          format: uuid
+        isRequired:
+          type: boolean
+          default: false
+
+    AppVersion:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        appId:
+          type: string
+          format: uuid
+        version:
+          type: string
+        downloadUrl:
+          type: string
+        releaseNotes:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    AppListResponse:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/App'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    # --- Kiosk Profile ---
+    KioskProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        orgId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        allowedApps:
+          type: array
+          items:
+            type: string
+        wallpaperUrl:
+          type: string
+        autoLaunchApp:
+          type: string
+        exitPassword:
+          type: string
+        settings:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateKioskProfileRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+        allowedApps:
+          type: array
+          items:
+            type: string
+          default: []
+        wallpaperUrl:
+          type: string
+          format: uri
+        autoLaunchApp:
+          type: string
+        exitPassword:
+          type: string
+        settings:
+          type: object
+          default: {}
+
+    UpdateKioskProfileRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+        allowedApps:
+          type: array
+          items:
+            type: string
+        wallpaperUrl:
+          type: string
+          format: uri
+        autoLaunchApp:
+          type: string
+        exitPassword:
+          type: string
+        settings:
+          type: object
+
+    KioskProfileListResponse:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/KioskProfile'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    # --- Compliance ---
+    ComplianceRule:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        orgId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        condition:
+          type: object
+        severity:
+          $ref: '#/components/schemas/Severity'
+        action:
+          type: object
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateComplianceRuleRequest:
+      type: object
+      required: [name, condition]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+        condition:
+          type: object
+        severity:
+          $ref: '#/components/schemas/Severity'
+        action:
+          type: object
+          default: {}
+        isActive:
+          type: boolean
+          default: true
+
+    UpdateComplianceRuleRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        condition:
+          type: object
+        severity:
+          $ref: '#/components/schemas/Severity'
+        action:
+          type: object
+        isActive:
+          type: boolean
+
+    ComplianceStatusSummary:
+      type: object
+      required: [compliant, nonCompliant, unknown]
+      properties:
+        compliant:
+          type: integer
+        nonCompliant:
+          type: integer
+        unknown:
+          type: integer
+
+    ComplianceViolation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        orgId:
+          type: string
+          format: uuid
+        deviceId:
+          type: string
+          format: uuid
+        ruleId:
+          type: string
+          format: uuid
+        details:
+          type: object
+        resolvedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    ComplianceRuleListResponse:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComplianceRule'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    ViolationListResponse:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComplianceViolation'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    # --- Geofence ---
+    Geofence:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        orgId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        latitude:
+          type: string
+        longitude:
+          type: string
+        radiusMeters:
+          type: integer
+        action:
+          type: object
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateGeofenceRequest:
+      type: object
+      required: [name, latitude, longitude, radiusMeters]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+        latitude:
+          type: string
+        longitude:
+          type: string
+        radiusMeters:
+          type: integer
+          minimum: 50
+          maximum: 100000
+        action:
+          type: object
+          default: {}
+        isActive:
+          type: boolean
+          default: true
+
+    UpdateGeofenceRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        latitude:
+          type: string
+        longitude:
+          type: string
+        radiusMeters:
+          type: integer
+          minimum: 50
+          maximum: 100000
+        action:
+          type: object
+        isActive:
+          type: boolean
+
+    GeofenceListResponse:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Geofence'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    # --- Audit Log ---
+    AuditLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        orgId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        action:
+          type: string
+        resource:
+          type: string
+        resourceId:
+          type: string
+          format: uuid
+        details:
+          type: object
+        ipAddress:
+          type: string
+        userAgent:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    AuditLogListResponse:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLog'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    # --- Webhook ---
+    Webhook:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        orgId:
+          type: string
+          format: uuid
+        url:
+          type: string
+          format: uri
+        events:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [active, inactive]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateWebhookRequest:
+      type: object
+      required: [url, events]
+      properties:
+        url:
+          type: string
+          format: uri
+        events:
+          type: array
+          items:
+            type: string
+          minItems: 1
+        status:
+          type: string
+          enum: [active, inactive]
+          default: active
+
+    UpdateWebhookRequest:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+        events:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [active, inactive]
+
+    WebhookWithSecret:
+      allOf:
+        - $ref: '#/components/schemas/Webhook'
+        - type: object
+          properties:
+            secret:
+              type: string
+
+    WebhookDelivery:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        webhookId:
+          type: string
+          format: uuid
+        event:
+          type: string
+        payload:
+          type: object
+        responseStatus:
+          type: integer
+        responseBody:
+          type: string
+        deliveredAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    WebhookListResponse:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Webhook'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    WebhookDeliveryListResponse:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WebhookDelivery'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    # --- Enrollment ---
+    EnrollmentConfig:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        orgId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        platform:
+          $ref: '#/components/schemas/Platform'
+        token:
+          type: string
+        maxEnrollments:
+          type: integer
+        currentEnrollments:
+          type: integer
+        defaultGroupId:
+          type: string
+          format: uuid
+        defaultPolicyId:
+          type: string
+          format: uuid
+        expiresAt:
+          type: string
+          format: date-time
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateEnrollmentConfigRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        platform:
+          $ref: '#/components/schemas/Platform'
+        maxEnrollments:
+          type: integer
+          minimum: 1
+        defaultGroupId:
+          type: string
+          format: uuid
+        defaultPolicyId:
+          type: string
+          format: uuid
+        expiresAt:
+          type: string
+          format: date-time
+
+    EnrollmentQrResponse:
+      type: object
+      properties:
+        enrollmentToken:
+          type: string
+        platform:
+          $ref: '#/components/schemas/Platform'
+        configId:
+          type: string
+          format: uuid
+        qrData:
+          type: string
+
+    EnrollmentConfigListResponse:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EnrollmentConfig'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    # --- Shared ---
+    PolicyAssignment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        policyId:
+          type: string
+          format: uuid
+        deviceId:
+          type: string
+          format: uuid
+        groupId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+
+    AppAssignment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        appId:
+          type: string
+          format: uuid
+        deviceId:
+          type: string
+          format: uuid
+        groupId:
+          type: string
+          format: uuid
+        isRequired:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    GroupMember:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        groupId:
+          type: string
+          format: uuid
+        deviceId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    NoContent:
+      description: Successful deletion, no content returned
+
+paths:
+  # ==================== AUTH ====================
+  /auth/login:
+    post:
+      operationId: login
+      summary: Authenticate and obtain JWT tokens
+      tags: [auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/refresh:
+    post:
+      operationId: refreshToken
+      summary: Refresh JWT tokens
+      tags: [auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Tokens refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      operationId: logout
+      summary: Invalidate current session
+      tags: [auth]
+      responses:
+        '200':
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ==================== DEVICES ====================
+  /devices:
+    get:
+      operationId: listDevices
+      summary: List devices with pagination and filters
+      tags: [devices]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SortByParam'
+        - $ref: '#/components/parameters/SortOrderParam'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/DeviceStatus'
+        - name: platform
+          in: query
+          schema:
+            $ref: '#/components/schemas/Platform'
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by device name
+        - name: complianceStatus
+          in: query
+          schema:
+            $ref: '#/components/schemas/ComplianceStatus'
+      responses:
+        '200':
+          description: Paginated list of devices
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /devices/{id}:
+    get:
+      operationId: getDevice
+      summary: Get device by ID
+      tags: [devices]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Device details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /devices/{id}/policies:
+    get:
+      operationId: getDevicePolicies
+      summary: Get policies assigned to a device
+      tags: [devices]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Assigned policies
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        assignmentId:
+                          type: string
+                          format: uuid
+                        policyId:
+                          type: string
+                          format: uuid
+                        policyName:
+                          type: string
+                        platform:
+                          $ref: '#/components/schemas/Platform'
+                        version:
+                          type: integer
+                        assignedAt:
+                          type: string
+                          format: date-time
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /devices/{id}/apps:
+    get:
+      operationId: getDeviceApps
+      summary: Get apps assigned to a device
+      tags: [devices]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Assigned apps
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        assignmentId:
+                          type: string
+                          format: uuid
+                        appId:
+                          type: string
+                          format: uuid
+                        appName:
+                          type: string
+                        bundleId:
+                          type: string
+                        isRequired:
+                          type: boolean
+                        assignedAt:
+                          type: string
+                          format: date-time
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /devices/{id}/compliance:
+    get:
+      operationId: getDeviceCompliance
+      summary: Get compliance violations for a device
+      tags: [devices]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Compliance violations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        violationId:
+                          type: string
+                          format: uuid
+                        ruleId:
+                          type: string
+                          format: uuid
+                        ruleName:
+                          type: string
+                        severity:
+                          type: string
+                        details:
+                          type: object
+                        resolvedAt:
+                          type: string
+                          format: date-time
+                        createdAt:
+                          type: string
+                          format: date-time
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /devices/{id}/commands:
+    post:
+      operationId: sendDeviceCommand
+      summary: Send a command to a device
+      tags: [devices]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendCommandRequest'
+      responses:
+        '201':
+          description: Command created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Command'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==================== POLICIES ====================
+  /policies:
+    get:
+      operationId: listPolicies
+      summary: List policies
+      tags: [policies]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SortByParam'
+        - $ref: '#/components/parameters/SortOrderParam'
+      responses:
+        '200':
+          description: Paginated list of policies
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyListResponse'
+    post:
+      operationId: createPolicy
+      summary: Create a policy
+      tags: [policies]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePolicyRequest'
+      responses:
+        '201':
+          description: Policy created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Policy'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /policies/{id}:
+    get:
+      operationId: getPolicy
+      summary: Get policy by ID
+      tags: [policies]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Policy details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Policy'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      operationId: updatePolicy
+      summary: Update a policy
+      tags: [policies]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePolicyRequest'
+      responses:
+        '200':
+          description: Policy updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Policy'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deletePolicy
+      summary: Delete a policy
+      tags: [policies]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /policies/{id}/versions:
+    get:
+      operationId: getPolicyVersions
+      summary: Get policy version history
+      tags: [policies]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Version history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PolicyVersion'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /policies/{id}/assignments:
+    post:
+      operationId: createPolicyAssignment
+      summary: Assign a policy to a device or group
+      tags: [policies]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyAssignmentRequest'
+      responses:
+        '201':
+          description: Assignment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyAssignment'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  # ==================== GROUPS ====================
+  /groups:
+    get:
+      operationId: listGroups
+      summary: List device groups
+      tags: [groups]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Paginated list of groups
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupListResponse'
+    post:
+      operationId: createGroup
+      summary: Create a device group
+      tags: [groups]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGroupRequest'
+      responses:
+        '201':
+          description: Group created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceGroup'
+
+  /groups/{id}:
+    get:
+      operationId: getGroup
+      summary: Get device group by ID
+      tags: [groups]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Group details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceGroup'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      operationId: updateGroup
+      summary: Update a device group
+      tags: [groups]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateGroupRequest'
+      responses:
+        '200':
+          description: Group updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceGroup'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteGroup
+      summary: Delete a device group
+      tags: [groups]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+
+  /groups/{id}/members:
+    post:
+      operationId: addGroupMember
+      summary: Add a device to a group
+      tags: [groups]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddGroupMemberRequest'
+      responses:
+        '201':
+          description: Member added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupMember'
+
+  /groups/{id}/members/{deviceId}:
+    delete:
+      operationId: removeGroupMember
+      summary: Remove a device from a group
+      tags: [groups]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+
+  # ==================== COMMANDS ====================
+  /commands:
+    get:
+      operationId: listCommands
+      summary: List commands
+      tags: [commands]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/CommandStatus'
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: deviceId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Paginated list of commands
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandListResponse'
+
+  /commands/{id}:
+    get:
+      operationId: getCommand
+      summary: Get command by ID
+      tags: [commands]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Command details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Command'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /commands/{id}/cancel:
+    post:
+      operationId: cancelCommand
+      summary: Cancel a pending command
+      tags: [commands]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Command cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Command'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Command cannot be cancelled in current status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /commands/bulk:
+    post:
+      operationId: bulkSendCommand
+      summary: Send a command to multiple devices
+      tags: [commands]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkCommandRequest'
+      responses:
+        '201':
+          description: Bulk commands created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Command'
+                  count:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  # ==================== APPS ====================
+  /apps:
+    get:
+      operationId: listApps
+      summary: List apps
+      tags: [apps]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Paginated list of apps
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppListResponse'
+    post:
+      operationId: createApp
+      summary: Create an app
+      tags: [apps]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAppRequest'
+      responses:
+        '201':
+          description: App created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/App'
+
+  /apps/{id}:
+    get:
+      operationId: getApp
+      summary: Get app by ID
+      tags: [apps]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: App details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/App'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      operationId: updateApp
+      summary: Update an app
+      tags: [apps]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAppRequest'
+      responses:
+        '200':
+          description: App updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/App'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteApp
+      summary: Delete an app
+      tags: [apps]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+
+  /apps/{id}/versions:
+    post:
+      operationId: createAppVersion
+      summary: Add an app version
+      tags: [apps]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAppVersionRequest'
+      responses:
+        '201':
+          description: Version created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppVersion'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /apps/{id}/assignments:
+    post:
+      operationId: createAppAssignment
+      summary: Assign an app to a device or group
+      tags: [apps]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppAssignmentRequest'
+      responses:
+        '201':
+          description: Assignment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppAssignment'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  # ==================== KIOSK PROFILES ====================
+  /kiosk:
+    get:
+      operationId: listKioskProfiles
+      summary: List kiosk profiles
+      tags: [kiosk]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Paginated list of kiosk profiles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KioskProfileListResponse'
+    post:
+      operationId: createKioskProfile
+      summary: Create a kiosk profile
+      tags: [kiosk]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateKioskProfileRequest'
+      responses:
+        '201':
+          description: Profile created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KioskProfile'
+
+  /kiosk/{id}:
+    get:
+      operationId: getKioskProfile
+      summary: Get kiosk profile by ID
+      tags: [kiosk]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Profile details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KioskProfile'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      operationId: updateKioskProfile
+      summary: Update a kiosk profile
+      tags: [kiosk]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateKioskProfileRequest'
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KioskProfile'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteKioskProfile
+      summary: Delete a kiosk profile
+      tags: [kiosk]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+
+  # ==================== COMPLIANCE ====================
+  /compliance/rules:
+    get:
+      operationId: listComplianceRules
+      summary: List compliance rules
+      tags: [compliance]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Paginated list of compliance rules
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComplianceRuleListResponse'
+    post:
+      operationId: createComplianceRule
+      summary: Create a compliance rule
+      tags: [compliance]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateComplianceRuleRequest'
+      responses:
+        '201':
+          description: Rule created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComplianceRule'
+
+  /compliance/rules/{id}:
+    get:
+      operationId: getComplianceRule
+      summary: Get compliance rule by ID
+      tags: [compliance]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Rule details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComplianceRule'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      operationId: updateComplianceRule
+      summary: Update a compliance rule
+      tags: [compliance]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateComplianceRuleRequest'
+      responses:
+        '200':
+          description: Rule updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComplianceRule'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteComplianceRule
+      summary: Delete a compliance rule
+      tags: [compliance]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+
+  /compliance/status:
+    get:
+      operationId: getComplianceStatus
+      summary: Get compliance status summary
+      tags: [compliance]
+      responses:
+        '200':
+          description: Compliance status counts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComplianceStatusSummary'
+
+  /compliance/violations:
+    get:
+      operationId: listComplianceViolations
+      summary: List compliance violations
+      tags: [compliance]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: resolved
+          in: query
+          schema:
+            type: string
+            enum: ['true', 'false']
+          description: Filter by resolution status
+      responses:
+        '200':
+          description: Paginated list of violations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ViolationListResponse'
+
+  # ==================== GEOFENCES ====================
+  /geofences:
+    get:
+      operationId: listGeofences
+      summary: List geofences
+      tags: [geofences]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Paginated list of geofences
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeofenceListResponse'
+    post:
+      operationId: createGeofence
+      summary: Create a geofence
+      tags: [geofences]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGeofenceRequest'
+      responses:
+        '201':
+          description: Geofence created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Geofence'
+
+  /geofences/{id}:
+    get:
+      operationId: getGeofence
+      summary: Get geofence by ID
+      tags: [geofences]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Geofence details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Geofence'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      operationId: updateGeofence
+      summary: Update a geofence
+      tags: [geofences]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateGeofenceRequest'
+      responses:
+        '200':
+          description: Geofence updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Geofence'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteGeofence
+      summary: Delete a geofence
+      tags: [geofences]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+
+  # ==================== AUDIT ====================
+  /audit:
+    get:
+      operationId: listAuditLogs
+      summary: List audit logs with filters
+      tags: [audit]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: action
+          in: query
+          schema:
+            type: string
+          description: Filter by action type
+        - name: resource
+          in: query
+          schema:
+            type: string
+          description: Filter by resource type
+        - name: userId
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by user ID
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Start of date range
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: End of date range
+      responses:
+        '200':
+          description: Paginated audit logs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogListResponse'
+
+  # ==================== WEBHOOKS ====================
+  /webhooks:
+    get:
+      operationId: listWebhooks
+      summary: List webhooks
+      tags: [webhooks]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Paginated list of webhooks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookListResponse'
+    post:
+      operationId: createWebhook
+      summary: Create a webhook
+      tags: [webhooks]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWebhookRequest'
+      responses:
+        '201':
+          description: Webhook created (includes secret, shown only once)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookWithSecret'
+
+  /webhooks/{id}:
+    get:
+      operationId: getWebhook
+      summary: Get webhook by ID
+      tags: [webhooks]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Webhook details (secret not included)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Webhook'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      operationId: updateWebhook
+      summary: Update a webhook
+      tags: [webhooks]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWebhookRequest'
+      responses:
+        '200':
+          description: Webhook updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Webhook'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteWebhook
+      summary: Delete a webhook
+      tags: [webhooks]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+
+  /webhooks/{id}/deliveries:
+    get:
+      operationId: listWebhookDeliveries
+      summary: List webhook deliveries
+      tags: [webhooks]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Paginated delivery history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookDeliveryListResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==================== ENROLLMENT ====================
+  /enrollment/configs:
+    post:
+      operationId: createEnrollmentConfig
+      summary: Create an enrollment configuration
+      tags: [enrollment]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEnrollmentConfigRequest'
+      responses:
+        '201':
+          description: Enrollment config created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnrollmentConfig'
+    get:
+      operationId: listEnrollmentConfigs
+      summary: List enrollment configurations
+      tags: [enrollment]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Paginated enrollment configs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnrollmentConfigListResponse'
+
+  /enrollment/qr-code/{id}:
+    get:
+      operationId: getEnrollmentQrCode
+      summary: Get QR code enrollment data for a config
+      tags: [enrollment]
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: QR code data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnrollmentQrResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '410':
+          description: Enrollment config is expired, inactive, or at capacity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'

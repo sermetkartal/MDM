@@ -1,0 +1,119 @@
+groups:
+  - name: mdm-platform
+    rules:
+      - alert: HighAPIErrorRate
+        expr: |
+          (
+            sum(rate(mdm_api_request_duration_seconds_count{status=~"5.."}[5m]))
+            /
+            sum(rate(mdm_api_request_duration_seconds_count[5m]))
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High API error rate (> 5%)"
+          description: "API error rate is {{ $value | humanizePercentage }} over the last 5 minutes."
+          runbook_url: "https://wiki.internal/runbooks/mdm/high-error-rate"
+
+      - alert: HighAPILatency
+        expr: |
+          histogram_quantile(0.99, sum(rate(mdm_api_request_duration_seconds_bucket[5m])) by (le)) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High API latency (p99 > 2s)"
+          description: "API p99 latency is {{ $value | humanizeDuration }} over the last 5 minutes."
+
+      - alert: DeviceCheckinDrop
+        expr: |
+          (
+            rate(mdm_device_checkins_total[5m])
+            /
+            rate(mdm_device_checkins_total[10m] offset 10m)
+          ) < 0.7
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Device check-in rate dropped > 30%"
+          description: "Check-in rate has dropped by more than 30% compared to 10 minutes ago."
+          runbook_url: "https://wiki.internal/runbooks/mdm/checkin-drop"
+
+      - alert: PodCrashLooping
+        expr: |
+          increase(kube_pod_container_status_restarts_total{namespace="mdm"}[15m]) > 3
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Pod {{ $labels.pod }} is crash-looping"
+          description: "Pod {{ $labels.pod }} has restarted {{ $value }} times in the last 15 minutes."
+
+      - alert: CertificateExpiring
+        expr: |
+          (probe_ssl_earliest_cert_expiry - time()) / 86400 < 14
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "TLS certificate expiring soon"
+          description: "Certificate for {{ $labels.instance }} expires in {{ $value | humanize }} days."
+
+      - alert: DiskUsageHigh
+        expr: |
+          (
+            node_filesystem_avail_bytes{mountpoint="/"}
+            /
+            node_filesystem_size_bytes{mountpoint="/"}
+          ) < 0.2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk usage above 80%"
+          description: "Disk usage on {{ $labels.instance }} is at {{ $value | humanizePercentage }}."
+
+      - alert: HighMemoryUsage
+        expr: |
+          (
+            1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)
+          ) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Memory usage above 90%"
+          description: "Memory usage on {{ $labels.instance }} is at {{ $value | humanizePercentage }}."
+
+      - alert: NATSConsumerLag
+        expr: |
+          nats_consumer_num_pending > 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "NATS consumer lag > 1000 pending"
+          description: "Consumer {{ $labels.consumer_name }} on stream {{ $labels.stream_name }} has {{ $value }} pending messages."
+
+      - alert: DatabaseReplicationLag
+        expr: |
+          pg_replication_lag > 30
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database replication lag > 30s"
+          description: "PostgreSQL replication lag is {{ $value | humanizeDuration }}."
+          runbook_url: "https://wiki.internal/runbooks/mdm/db-replication-lag"
+
+      - alert: RedisMemoryHigh
+        expr: |
+          redis_memory_used_bytes / redis_memory_max_bytes > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis memory usage above 80%"
+          description: "Redis memory is at {{ $value | humanizePercentage }} of maxmemory."

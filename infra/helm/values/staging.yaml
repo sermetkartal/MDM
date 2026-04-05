@@ -1,0 +1,86 @@
+# Staging environment overrides
+# Usage: helm install <chart> -f values/staging.yaml
+
+device-service:
+  replicaCount: 2
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  hpa:
+    enabled: false
+  env:
+    LOG_LEVEL: "info"
+    DATABASE_URL: "postgres://mdm:mdm@postgres:5432/mdm_devices?sslmode=require"
+    REDIS_URL: "redis://redis:6379/0"
+    NATS_URL: "nats://nats:4222"
+
+policy-service:
+  replicaCount: 2
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  hpa:
+    enabled: false
+  env:
+    LOG_LEVEL: "info"
+    DATABASE_URL: "postgres://mdm:mdm@postgres:5432/mdm_policies?sslmode=require"
+    REDIS_URL: "redis://redis:6379/1"
+    NATS_URL: "nats://nats:4222"
+
+command-service:
+  replicaCount: 2
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  hpa:
+    enabled: false
+  env:
+    LOG_LEVEL: "info"
+    DATABASE_URL: "postgres://mdm:mdm@postgres:5432/mdm_commands?sslmode=require"
+    REDIS_URL: "redis://redis:6379/2"
+    NATS_URL: "nats://nats:4222"
+
+admin-api:
+  replicaCount: 2
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  hpa:
+    enabled: false
+  env:
+    LOG_LEVEL: "info"
+    NODE_ENV: "staging"
+    DATABASE_URL: "postgres://mdm:mdm@postgres:5432/mdm?sslmode=require"
+    REDIS_URL: "redis://redis:6379/3"
+    NATS_URL: "nats://nats:4222"
+
+admin-console:
+  replicaCount: 2
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  hpa:
+    enabled: false
+  env:
+    LOG_LEVEL: "info"
+    NODE_ENV: "staging"

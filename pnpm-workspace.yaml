@@ -1,0 +1,9 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+  - "services/admin-api"
+  - "services/app-service"
+  - "services/file-service"
+  - "services/notification-service"
+  - "services/report-service"
+  - "services/audit-service"

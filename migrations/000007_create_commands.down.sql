@@ -1,0 +1,4 @@
+DROP TABLE IF EXISTS command_history CASCADE;
+DROP TABLE IF EXISTS commands CASCADE;
+DROP TYPE IF EXISTS command_status;
+DROP TYPE IF EXISTS command_type;

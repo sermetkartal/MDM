@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MDM Agent</string>
+    <string name="agent_service_notification_title">MDM Agent Active</string>
+    <string name="agent_service_notification_text">Device is managed by your organization</string>
+    <string name="kiosk_watchdog_notification_title">Kiosk Mode Active</string>
+    <string name="kiosk_watchdog_notification_text">Device is in kiosk mode</string>
+</resources>

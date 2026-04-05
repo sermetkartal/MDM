@@ -1,0 +1,152 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "mdm-device-fleet",
+    "title": "MDM Device Fleet",
+    "tags": ["mdm", "devices"],
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": { "from": "now-1h", "to": "now" },
+    "templating": {
+      "list": [
+        {
+          "name": "org",
+          "type": "query",
+          "query": "label_values(mdm_devices_total, org)",
+          "datasource": "Prometheus",
+          "includeAll": true,
+          "allValue": ".*",
+          "current": { "text": "All", "value": "$__all" }
+        },
+        {
+          "name": "timeRange",
+          "type": "interval",
+          "options": [
+            { "text": "5m", "value": "5m" },
+            { "text": "1h", "value": "1h" },
+            { "text": "24h", "value": "24h" }
+          ],
+          "current": { "text": "5m", "value": "5m" }
+        }
+      ]
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Total Devices",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+        "targets": [
+          {
+            "expr": "sum(mdm_devices_total{org=~\"$org\"})",
+            "legendFormat": "Total"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Online Devices",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+        "targets": [
+          {
+            "expr": "sum(mdm_devices_total{org=~\"$org\",status=\"online\"})",
+            "legendFormat": "Online"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": { "color": { "mode": "fixed", "fixedColor": "green" } }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Offline Devices",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+        "targets": [
+          {
+            "expr": "sum(mdm_devices_total{org=~\"$org\",status=\"offline\"})",
+            "legendFormat": "Offline"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": { "color": { "mode": "fixed", "fixedColor": "red" } }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Check-in Rate",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+        "targets": [
+          {
+            "expr": "rate(mdm_device_checkins_total[$timeRange])",
+            "legendFormat": "Check-ins/s"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": { "unit": "ops" }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Online vs Offline",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+        "targets": [
+          {
+            "expr": "sum(mdm_devices_total{org=~\"$org\",status=\"online\"})",
+            "legendFormat": "Online"
+          },
+          {
+            "expr": "sum(mdm_devices_total{org=~\"$org\",status=\"offline\"})",
+            "legendFormat": "Offline"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Enrollment Trend (7d)",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+        "targets": [
+          {
+            "expr": "sum(increase(mdm_devices_total{org=~\"$org\"}[1d]))",
+            "legendFormat": "New Enrollments"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": { "custom": { "drawStyle": "bars" } }
+        },
+        "timeFrom": "7d"
+      },
+      {
+        "id": 7,
+        "title": "Top Device Models",
+        "type": "piechart",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+        "targets": [
+          {
+            "expr": "topk(10, sum by (model) (mdm_devices_total{org=~\"$org\"}))",
+            "legendFormat": "{{model}}"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Check-in Rate Over Time",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+        "targets": [
+          {
+            "expr": "rate(mdm_device_checkins_total[$timeRange])",
+            "legendFormat": "Check-ins/s"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": { "unit": "ops" }
+        }
+      }
+    ]
+  }
+}

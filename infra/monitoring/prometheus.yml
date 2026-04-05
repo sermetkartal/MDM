@@ -1,0 +1,169 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+rule_files:
+  - "alerts/rules.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - "alertmanager:9093"
+
+scrape_configs:
+  # Self-monitoring
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # MDM services via Kubernetes service discovery
+  - job_name: "mdm-services"
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names: ["mdm"]
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: "true"
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        target_label: __address__
+        regex: (.+)
+        replacement: "${1}:${2}"
+      - source_labels: [__meta_kubernetes_pod_ip, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        target_label: __address__
+        regex: "(.+);(.+)"
+        replacement: "$1:$2"
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__meta_kubernetes_namespace]
+        action: replace
+        target_label: namespace
+      - source_labels: [__meta_kubernetes_pod_name]
+        action: replace
+        target_label: pod
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        action: replace
+        target_label: app
+
+  # Static fallback for local development
+  - job_name: "mdm-device-service"
+    static_configs:
+      - targets: ["device-service:9090"]
+        labels:
+          service: "device-service"
+
+  - job_name: "mdm-policy-service"
+    static_configs:
+      - targets: ["policy-service:9090"]
+        labels:
+          service: "policy-service"
+
+  - job_name: "mdm-command-service"
+    static_configs:
+      - targets: ["command-service:9090"]
+        labels:
+          service: "command-service"
+
+  - job_name: "mdm-api-gateway"
+    static_configs:
+      - targets: ["api-gateway:9090"]
+        labels:
+          service: "api-gateway"
+
+  - job_name: "mdm-compliance-service"
+    static_configs:
+      - targets: ["compliance-service:9090"]
+        labels:
+          service: "compliance-service"
+
+  - job_name: "mdm-cert-service"
+    static_configs:
+      - targets: ["cert-service:9090"]
+        labels:
+          service: "cert-service"
+
+  - job_name: "mdm-geofence-service"
+    static_configs:
+      - targets: ["geofence-service:9090"]
+        labels:
+          service: "geofence-service"
+
+  - job_name: "mdm-kiosk-service"
+    static_configs:
+      - targets: ["kiosk-service:9090"]
+        labels:
+          service: "kiosk-service"
+
+  - job_name: "mdm-notification-service"
+    static_configs:
+      - targets: ["notification-service:9090"]
+        labels:
+          service: "notification-service"
+
+  # PostgreSQL exporter
+  - job_name: "postgres"
+    static_configs:
+      - targets: ["postgres-exporter:9187"]
+
+  # Redis exporter
+  - job_name: "redis"
+    static_configs:
+      - targets: ["redis-exporter:9121"]
+
+  # NATS exporter
+  - job_name: "nats"
+    static_configs:
+      - targets: ["nats:8222"]
+
+  # Node exporter (infrastructure metrics)
+  - job_name: "node"
+    kubernetes_sd_configs:
+      - role: node
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: "(.*):10250"
+        replacement: "${1}:9100"
+        target_label: __address__
+
+# Recording rules for common aggregations
+recording_rules:
+  groups:
+    - name: mdm-aggregations
+      interval: 30s
+      rules:
+        - record: mdm:api_request_rate:5m
+          expr: sum(rate(mdm_api_request_duration_seconds_count[5m])) by (method, path)
+
+        - record: mdm:api_error_rate:5m
+          expr: |
+            sum(rate(mdm_api_request_duration_seconds_count{status=~"5.."}[5m]))
+            /
+            sum(rate(mdm_api_request_duration_seconds_count[5m]))
+
+        - record: mdm:api_latency_p95:5m
+          expr: histogram_quantile(0.95, sum(rate(mdm_api_request_duration_seconds_bucket[5m])) by (le))
+
+        - record: mdm:api_latency_p99:5m
+          expr: histogram_quantile(0.99, sum(rate(mdm_api_request_duration_seconds_bucket[5m])) by (le))
+
+        - record: mdm:device_checkin_rate:5m
+          expr: rate(mdm_device_checkins_total[5m])
+
+        - record: mdm:devices_by_org_status
+          expr: sum by (org, status) (mdm_devices_total)
+
+        - record: mdm:ws_connections_total
+          expr: sum(mdm_ws_connections_active)
+
+        - record: mdm:policy_deployment_success_rate:5m
+          expr: |
+            sum(rate(mdm_policy_deployments_total{status="success"}[5m]))
+            /
+            sum(rate(mdm_policy_deployments_total[5m]))

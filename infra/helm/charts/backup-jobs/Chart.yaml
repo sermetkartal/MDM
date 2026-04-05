@@ -1,0 +1,5 @@
+apiVersion: v2
+name: backup-jobs
+description: Kubernetes CronJobs for MDM backup, retention, and verification
+version: 0.1.0
+appVersion: "1.0.0"

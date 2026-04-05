@@ -1,0 +1,117 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "mdm-websocket",
+    "title": "MDM WebSocket Connections",
+    "tags": ["mdm", "websocket"],
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": { "from": "now-1h", "to": "now" },
+    "templating": {
+      "list": [
+        {
+          "name": "org",
+          "type": "query",
+          "query": "label_values(mdm_ws_connections_active, org)",
+          "datasource": "Prometheus",
+          "includeAll": true,
+          "allValue": ".*",
+          "current": { "text": "All", "value": "$__all" }
+        },
+        {
+          "name": "timeRange",
+          "type": "interval",
+          "options": [
+            { "text": "5m", "value": "5m" },
+            { "text": "15m", "value": "15m" },
+            { "text": "1h", "value": "1h" }
+          ],
+          "current": { "text": "5m", "value": "5m" }
+        }
+      ]
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Active Connections",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 8, "x": 0, "y": 0 },
+        "targets": [
+          {
+            "expr": "sum(mdm_ws_connections_active)",
+            "legendFormat": "Active"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Message Throughput",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 8, "x": 8, "y": 0 },
+        "targets": [
+          {
+            "expr": "sum(rate(mdm_ws_messages_total[$timeRange]))",
+            "legendFormat": "Messages/s"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": { "unit": "ops" }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Reconnect Rate",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 8, "x": 16, "y": 0 },
+        "targets": [
+          {
+            "expr": "sum(rate(mdm_ws_reconnects_total[$timeRange]))",
+            "legendFormat": "Reconnects/s"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": { "unit": "ops" }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Active Connections Over Time",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 4 },
+        "targets": [
+          {
+            "expr": "sum(mdm_ws_connections_active)",
+            "legendFormat": "Total"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Message Throughput Over Time",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+        "targets": [
+          {
+            "expr": "sum(rate(mdm_ws_messages_total[$timeRange]))",
+            "legendFormat": "Messages/s"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": { "unit": "ops" }
+        }
+      },
+      {
+        "id": 6,
+        "title": "Connections by Organization",
+        "type": "piechart",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+        "targets": [
+          {
+            "expr": "sum by (org) (mdm_ws_connections_active)",
+            "legendFormat": "{{org}}"
+          }
+        ]
+      }
+    ]
+  }
+}
